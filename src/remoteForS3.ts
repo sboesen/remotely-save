@@ -218,10 +218,13 @@ export const getS3Client = (s3Config: S3Config) => {
     }
   };
 
+  
+  console.error(s3ClientConfig);
+
   if (VALID_REQURL && s3Config.bypassCorsLocally) {
     s3ClientConfig.requestHandler = new ObsHttpHandler();
   }
-  s3Client = new S3Client([s3ClientConfig]);
+  s3Client = new S3Client(s3ClientConfig);
 
   s3Client.middlewareStack.add(
     (next, context) => (args) => {
