@@ -20,8 +20,6 @@ import {
   decryptBase64urlToString,
   encryptStringToBase64url,
   getSizeFromOrigToEnc,
-  MAGIC_ENCRYPTED_PREFIX_BASE32,
-  MAGIC_ENCRYPTED_PREFIX_BASE64URL,
 } from "./encrypt";
 import type { FileFolderHistoryRecord, InternalDBs } from "./localdb";
 import {
@@ -98,80 +96,34 @@ export const isPasswordOk = async (
     } as PasswordCheckType;
   }
   const santyCheckKey = remote[0].key;
-  if (santyCheckKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE32)) {
-    // this is encrypted using old base32!
-    // try to decrypt it using the provided password.
-    if (password === "") {
-      return {
-        ok: false,
-        reason: "remote_encrypted_local_no_password",
-      } as PasswordCheckType;
-    }
-    try {
-      const res = await decryptBase32ToString(santyCheckKey, password);
-
-      // additional test
-      // because iOS Safari bypasses decryption with wrong password!
-      if (isVaildText(res)) {
-        return {
-          ok: true,
-          reason: "password_matched",
-        } as PasswordCheckType;
-      } else {
-        return {
-          ok: false,
-          reason: "invalid_text_after_decryption",
-        } as PasswordCheckType;
-      }
-    } catch (error) {
-      return {
-        ok: false,
-        reason: "password_not_matched",
-      } as PasswordCheckType;
-    }
-  }
-  if (santyCheckKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE64URL)) {
-    // this is encrypted using new base64url!
-    // try to decrypt it using the provided password.
-    if (password === "") {
-      return {
-        ok: false,
-        reason: "remote_encrypted_local_no_password",
-      } as PasswordCheckType;
-    }
-    try {
-      const res = await decryptBase64urlToString(santyCheckKey, password);
-
-      // additional test
-      // because iOS Safari bypasses decryption with wrong password!
-      if (isVaildText(res)) {
-        return {
-          ok: true,
-          reason: "password_matched",
-        } as PasswordCheckType;
-      } else {
-        return {
-          ok: false,
-          reason: "invalid_text_after_decryption",
-        } as PasswordCheckType;
-      }
-    } catch (error) {
-      return {
-        ok: false,
-        reason: "password_not_matched",
-      } as PasswordCheckType;
-    }
-  } else {
-    // it is not encrypted!
-    if (password !== "") {
-      return {
-        ok: false,
-        reason: "remote_not_encrypted_local_has_password",
-      } as PasswordCheckType;
-    }
+  // this is encrypted using new base64url!
+  // try to decrypt it using the provided password.
+  if (password === "") {
     return {
-      ok: true,
-      reason: "no_password_both_sides",
+      ok: false,
+      reason: "remote_encrypted_local_no_password",
+    } as PasswordCheckType;
+  }
+  try {
+    const res = await decryptBase64urlToString(santyCheckKey, password);
+
+    // additional test
+    // because iOS Safari bypasses decryption with wrong password!
+    if (isVaildText(res)) {
+      return {
+        ok: true,
+        reason: "password_matched",
+      } as PasswordCheckType;
+    } else {
+      return {
+        ok: false,
+        reason: "invalid_text_after_decryption",
+      } as PasswordCheckType;
+    }
+  } catch (error) {
+    return {
+      ok: false,
+      reason: "password_not_matched",
     } as PasswordCheckType;
   }
 };
@@ -196,15 +148,7 @@ export const parseRemoteItems = async (
     const remoteEncryptedKey = entry.key;
     let key = remoteEncryptedKey;
     if (password !== "") {
-      if (remoteEncryptedKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE32)) {
-        key = await decryptBase32ToString(remoteEncryptedKey, password);
-      } else if (
-        remoteEncryptedKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE64URL)
-      ) {
-        key = await decryptBase64urlToString(remoteEncryptedKey, password);
-      } else {
-        throw Error(`unexpected key=${remoteEncryptedKey}`);
-      }
+      key = await decryptBase64urlToString(remoteEncryptedKey, password);
     }
     const backwardMapping = await getSyncMetaMappingByRemoteKeyAndVault(
       remoteType,

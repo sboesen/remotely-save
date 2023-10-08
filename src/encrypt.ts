@@ -5,11 +5,6 @@ import { log } from "./moreOnLog";
 
 const DEFAULT_ITER = 20000;
 
-// base32.stringify(Buffer.from('Salted__'))
-export const MAGIC_ENCRYPTED_PREFIX_BASE32 = "KNQWY5DFMRPV";
-// base64.stringify(Buffer.from('Salted__'))
-export const MAGIC_ENCRYPTED_PREFIX_BASE64URL = "U2FsdGVkX";
-
 const getKeyFromPassword = async (
   salt: Uint8Array,
   password: string,
