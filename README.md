@@ -1,10 +1,6 @@
-# Remotely Save
+# Remotely Secure
 
-This is yet another unofficial sync plugin for Obsidian. If you like it or find it useful, please consider give it a [star ![GitHub Repo stars](https://img.shields.io/github/stars/fyears/remotely-save?style=social)](https://github.com/fyears/remotely-save) on Github.
-
-[![BuildCI](https://github.com/fyears/remotely-save/actions/workflows/auto-build.yml/badge.svg)](https://github.com/fyears/remotely-save/actions/workflows/auto-build.yml)
-
-[![downloads of latest version](https://img.shields.io/github/downloads-pre/remotely-save/remotely-save/latest/main.js?sort=semver)](https://github.com/fyears/remotely-save/releases)
+This is a modified, more secure version of the "Remotely Save" unofficial sync plugin for Obsidian. If you like it or find it useful, please consider give it a [star ![GitHub Repo stars](https://img.shields.io/github/stars/sboesen/remotely-secure?style=social)](https://github.com/sboesen/remotely-secure) on Github.
 
 ## Disclaimer
 
@@ -15,6 +11,13 @@ This is yet another unofficial sync plugin for Obsidian. If you like it or find 
 **ALWAYS, ALWAYS, backup your vault before using this plugin.**
 
 ## Features
+
+- Security updates:
+  - Fixed encryption bug resulting in AES-CBC usage using the same IV for all files, which can enable attacks that leak key material.
+  - Updated encryption to use AES-GCM.
+  - **No security guarantees**, but these are the issues I identified when reviewing the end-to-end encryption as implemented in remotely-save.
+
+- Sync on Save (thanks @sampurkiszb)
 
 - Supports:
   - Amazon S3 or S3-compatible
