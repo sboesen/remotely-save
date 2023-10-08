@@ -16,6 +16,7 @@ This is a modified, more secure version of the "Remotely Save" unofficial sync p
   - Fixed encryption bug resulting in AES-CBC usage using the same IV for all files, which can enable attacks that leak key material.
   - Updated encryption to use AES-GCM which is more secure and authenticates the ciphertext before decrypting, making it harder to exploit certain padding oracle attacks.
   - **No security guarantees**, but these are the issues I identified when reviewing the end-to-end encryption as implemented in remotely-save.
+  
 
 - Sync on Save (thanks @sampurkiszb)
 

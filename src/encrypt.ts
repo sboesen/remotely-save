@@ -10,7 +10,7 @@ export const MAGIC_ENCRYPTED_PREFIX_BASE32 = "KNQWY5DFMRPV";
 // base64.stringify(Buffer.from('Salted__'))
 export const MAGIC_ENCRYPTED_PREFIX_BASE64URL = "U2FsdGVkX";
 
-const getKeyIVFromPassword = async (
+const getKeyFromPassword = async (
   salt: Uint8Array,
   password: string,
   rounds: number = DEFAULT_ITER
@@ -31,7 +31,7 @@ const getKeyIVFromPassword = async (
       hash: "SHA-256",
     },
     k1,
-    256 + 128
+    256
   );
 
   return k2;
@@ -40,37 +40,35 @@ const getKeyIVFromPassword = async (
 export const encryptArrayBuffer = async (
   arrBuf: ArrayBuffer,
   password: string,
-  rounds: number = DEFAULT_ITER,
-  saltHex: string = ""
+  rounds: number = DEFAULT_ITER
 ) => {
-  let salt: Uint8Array;
-  if (saltHex !== "") {
-    salt = hexStringToTypedArray(saltHex);
-  } else {
-    salt = window.crypto.getRandomValues(new Uint8Array(8));
-  }
+  let salt = window.crypto.getRandomValues(new Uint8Array(16));
 
-  const derivedKey = await getKeyIVFromPassword(salt, password, rounds);
-  const key = derivedKey.slice(0, 32);
-  const iv = derivedKey.slice(32, 32 + 16);
+  const derivedKey = await getKeyFromPassword(salt, password, rounds);
+  // 12 bytes or 96 bits per GCM spec https://developer.mozilla.org/en-US/docs/Web/API/AesGcmParams
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+
+  log.error("Encrypt-salt: ", bufferToArrayBuffer(salt));
+  log.error("Encrypt-iv: ", bufferToArrayBuffer(iv));
 
   const keyCrypt = await window.crypto.subtle.importKey(
     "raw",
-    key,
-    { name: "AES-CBC" },
+    derivedKey,
+    { name: "AES-GCM" },
     false,
     ["encrypt", "decrypt"]
   );
+  log.error("Encrypt-Key: ", derivedKey);
 
   const enc = (await window.crypto.subtle.encrypt(
-    { name: "AES-CBC", iv },
+    { name: "AES-GCM", iv },
     keyCrypt,
     arrBuf
   )) as ArrayBuffer;
+  log.error("Encryption successful.");
 
-  const prefix = new TextEncoder().encode("Salted__");
-
-  const res = new Uint8Array([...prefix, ...salt, ...new Uint8Array(enc)]);
+  const res = new Uint8Array([...salt, ...iv, ...new Uint8Array(enc)]);
+  log.error("Encryption-ciphertext: ", enc);
 
   return bufferToArrayBuffer(res);
 };
@@ -80,29 +78,36 @@ export const decryptArrayBuffer = async (
   password: string,
   rounds: number = DEFAULT_ITER
 ) => {
-  const prefix = arrBuf.slice(0, 8);
-  const salt = arrBuf.slice(8, 16);
-  const derivedKey = await getKeyIVFromPassword(
+  const salt = arrBuf.slice(0, 16); // first 16 bytes are salt
+  const iv = arrBuf.slice(16, 28); // next 12 bytes are IV
+  const cipherText = arrBuf.slice(28); // final bytes are ciphertext
+  log.error(arrBuf);
+  log.error("arrbuf ^ next salt, iv, ciphertext");
+  log.error(salt);
+  log.error(iv);
+  log.error(cipherText);
+  const key = await getKeyFromPassword(
     new Uint8Array(salt),
     password,
     rounds
   );
-  const key = derivedKey.slice(0, 32);
-  const iv = derivedKey.slice(32, 32 + 16);
+  log.error("decKey", key);
 
   const keyCrypt = await window.crypto.subtle.importKey(
     "raw",
     key,
-    { name: "AES-CBC" },
+    { name: "AES-GCM" },
     false,
     ["encrypt", "decrypt"]
   );
 
+  log.error("imported key");
   const dec = (await window.crypto.subtle.decrypt(
-    { name: "AES-CBC", iv },
+    { name: "AES-GCM", iv },
     keyCrypt,
-    arrBuf.slice(16)
+    cipherText
   )) as ArrayBuffer;
+  log.error("decrypted");
 
   return dec;
 };
@@ -110,14 +115,12 @@ export const decryptArrayBuffer = async (
 export const encryptStringToBase32 = async (
   text: string,
   password: string,
-  rounds: number = DEFAULT_ITER,
-  saltHex: string = ""
+  rounds: number = DEFAULT_ITER
 ) => {
   const enc = await encryptArrayBuffer(
     bufferToArrayBuffer(new TextEncoder().encode(text)),
     password,
-    rounds,
-    saltHex
+    rounds
   );
   return base32.stringify(new Uint8Array(enc), { pad: false });
 };
@@ -139,14 +142,12 @@ export const decryptBase32ToString = async (
 export const encryptStringToBase64url = async (
   text: string,
   password: string,
-  rounds: number = DEFAULT_ITER,
-  saltHex: string = ""
+  rounds: number = DEFAULT_ITER
 ) => {
   const enc = await encryptArrayBuffer(
     bufferToArrayBuffer(new TextEncoder().encode(text)),
     password,
-    rounds,
-    saltHex
+    rounds
   );
   return base64url.stringify(new Uint8Array(enc), { pad: false });
 };
