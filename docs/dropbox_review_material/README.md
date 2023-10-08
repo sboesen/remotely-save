@@ -32,11 +32,11 @@ Most steps have screenshots.
    ![step06](./attachments/step06.png)
 7. In the settings panel, go to the "Community plugins" page, turn off the safe mode, and confirm to turn off the safe mode. Then click the "Browse" button for community plugins.
    ![step07](./attachments/step07.png)
-8. Search "Remotely Save" and install on the result.
+8. Search "Remotely Secure" and install on the result.
    ![step08](./attachments/step08.png)
 9. After successful installing the plugin, go back to the "Community plugins" page, and enable the plugin.
    ![step09](./attachments/step09.png)
-10. Go to newly added "Remotely Save" settings, select "Dropbox" in "Choose service", and click the "Auth" button.
+10. Go to newly added "Remotely Secure" settings, select "Dropbox" in "Choose service", and click the "Auth" button.
     ![step10](./attachments/step10.png)
 11. The standard auth flow address is shown, users should click the address, and finish the auth steps on the website. Finally, the Dropbox website should automatically redirect users back to the Obsidian app.
     ![step11](./attachments/step11.png)
