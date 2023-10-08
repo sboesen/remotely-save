@@ -9,6 +9,7 @@ import {
   ListObjectsV2CommandInput,
   PutObjectCommand,
   S3Client,
+  S3ClientConfig,
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import { HttpHandler, HttpRequest, HttpResponse } from "@aws-sdk/protocol-http";
@@ -148,6 +149,14 @@ class ObsHttpHandler extends FetchHttpHandler {
     }
     return Promise.race(raceOfPromises);
   }
+  updateHttpClientConfig(key: never, value: never): void {
+    // Implement this method if necessary
+  }
+
+  httpHandlerConfigs(): {} {
+    // Implement this method if necessary
+    return {};
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -198,28 +207,21 @@ export const getS3Client = (s3Config: S3Config) => {
 
   let s3Client: S3Client;
 
+
+  const s3ClientConfig: S3ClientConfig = {
+    region: s3Config.s3Region,
+    endpoint: endpoint,
+    forcePathStyle: s3Config.forcePathStyle,
+    credentials: {
+      accessKeyId: s3Config.s3AccessKeyID,
+      secretAccessKey: s3Config.s3SecretAccessKey,
+    }
+  };
+
   if (VALID_REQURL && s3Config.bypassCorsLocally) {
-    s3Client = new S3Client({
-      region: s3Config.s3Region,
-      endpoint: endpoint,
-      forcePathStyle: s3Config.forcePathStyle,
-      credentials: {
-        accessKeyId: s3Config.s3AccessKeyID,
-        secretAccessKey: s3Config.s3SecretAccessKey,
-      },
-      requestHandler: new ObsHttpHandler(),
-    });
-  } else {
-    s3Client = new S3Client({
-      region: s3Config.s3Region,
-      endpoint: endpoint,
-      forcePathStyle: s3Config.forcePathStyle,
-      credentials: {
-        accessKeyId: s3Config.s3AccessKeyID,
-        secretAccessKey: s3Config.s3SecretAccessKey,
-      },
-    });
+    s3ClientConfig.requestHandler = new ObsHttpHandler();
   }
+  s3Client = new S3Client([s3ClientConfig]);
 
   s3Client.middlewareStack.add(
     (next, context) => (args) => {
