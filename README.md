@@ -1,6 +1,6 @@
 # Remotely Secure
 
-Remotely Secure is a fork of **Remotely Save**, the unofficial sync plugin for Obsidian. The original **Remotely Save** plugin is not actively maintained and has multiple security issues; please see the [list of security updates](#security-updates-from-remotely-save) made to **Remotely Save**. Note this plugin is not backwards compatible with Remotely Save, save your data locally and have a backup before using this plugin.
+**Remotely Secure** is a fork of *Remotely Save*, the unofficial sync plugin for Obsidian. The original *Remotely Save* plugin is not actively maintained and has multiple security issues; please see the [list of security updates](#security-updates-from-remotely-save) made to *Remotely Save*. Note this plugin is not backwards compatible with Remotely Save, save your data locally and have a backup before using this plugin.
 
 If you like it or find it useful, please consider give it a [star ![GitHub Repo stars](https://img.shields.io/github/stars/sboesen/remotely-secure?style=social)](https://github.com/sboesen/remotely-secure) on Github.
 
