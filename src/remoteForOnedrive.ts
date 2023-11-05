@@ -6,7 +6,7 @@ import type {
   User,
 } from "@microsoft/microsoft-graph-types";
 import cloneDeep from "lodash/cloneDeep";
-import { request, requestUrl, requireApiVersion, Vault } from "obsidian";
+import { request, requestUrl, RequestUrlParam, requireApiVersion, Vault } from "obsidian";
 import {
   VALID_REQURL,
   COMMAND_CALLBACK_ONEDRIVE,
@@ -123,7 +123,7 @@ export const sendAuthReq = async (
   // instead of using msal
   // https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow
   // https://docs.microsoft.com/en-us/onedrive/developer/rest-api/getting-started/graph-oauth?view=odsp-graph-online#code-flow
-  const rsp1 = await request({
+  const rsp1 = await requestUrl({
     url: `${authority}/oauth2/v2.0/token`,
     method: "POST",
     contentType: "application/x-www-form-urlencoded",
@@ -138,7 +138,7 @@ export const sendAuthReq = async (
     }).toString(),
   });
 
-  const rsp2 = JSON.parse(rsp1);
+  const rsp2 = rsp1.json;
   // log.info(rsp2);
 
   if (rsp2.error !== undefined) {
@@ -154,26 +154,28 @@ export const sendRefreshTokenReq = async (
   refreshToken: string
 ) => {
   // also use Obsidian request to bypass CORS issue.
-  const rsp1 = await request({
+  const body = new URLSearchParams({
+    tenant: "consumers",
+    client_id: clientID,
+    scope: SCOPES.join(" "),
+    refresh_token: refreshToken,
+    grant_type: "refresh_token",
+  }).toString();
+  
+  const requestParams: RequestUrlParam = {
     url: `${authority}/oauth2/v2.0/token`,
     method: "POST",
     contentType: "application/x-www-form-urlencoded",
-    body: new URLSearchParams({
-      tenant: "consumers",
-      client_id: clientID,
-      scope: SCOPES.join(" "),
-      refresh_token: refreshToken,
-      grant_type: "refresh_token",
-    }).toString(),
-  });
-
-  const rsp2 = JSON.parse(rsp1);
+    body: body,
+  };
+  
+  const rsp = await requestUrl(requestParams).json;
   // log.info(rsp2);
 
-  if (rsp2.error !== undefined) {
-    return rsp2 as AccessCodeResponseFailedType;
+  if (rsp.error !== undefined) {
+    return rsp as AccessCodeResponseFailedType;
   } else {
-    return rsp2 as AccessCodeResponseSuccessfulType;
+    return rsp as AccessCodeResponseSuccessfulType;
   }
 };
 
@@ -437,49 +439,58 @@ export class WrappedOnedriveClient {
   getJson = async (pathFragOrig: string) => {
     const theUrl = this.buildUrl(pathFragOrig);
     log.debug(`getJson, theUrl=${theUrl}`);
-    return JSON.parse(
-      await request({
-        url: theUrl,
-        method: "GET",
-        contentType: "application/json",
-        headers: {
-          Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
-          "Cache-Control": "no-cache",
-        },
-      })
-    );
+    const accessToken = await this.authGetter.getAccessToken();
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      "Cache-Control": "no-cache",
+    };
+
+    const requestParams: RequestUrlParam = {
+      url: theUrl,
+      method: "GET",
+      contentType: "application/json",
+      headers: headers,
+    };
+
+    return await requestUrl(requestParams).json;
   };
 
   postJson = async (pathFragOrig: string, payload: any) => {
     const theUrl = this.buildUrl(pathFragOrig);
     log.debug(`postJson, theUrl=${theUrl}`);
-    return JSON.parse(
-      await request({
-        url: theUrl,
-        method: "POST",
-        contentType: "application/json",
-        body: JSON.stringify(payload),
-        headers: {
-          Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
-        },
-      })
-    );
+    const accessToken = await this.authGetter.getAccessToken();
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+    };
+
+    const requestParams: RequestUrlParam = {
+      url: theUrl,
+      method: "POST",
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+      headers: headers,
+    };
+
+    return await requestUrl(requestParams).json;
   };
 
   patchJson = async (pathFragOrig: string, payload: any) => {
     const theUrl = this.buildUrl(pathFragOrig);
     log.debug(`patchJson, theUrl=${theUrl}`);
-    return JSON.parse(
-      await request({
-        url: theUrl,
-        method: "PATCH",
-        contentType: "application/json",
-        body: JSON.stringify(payload),
-        headers: {
-          Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
-        },
-      })
-    );
+    const accessToken = await this.authGetter.getAccessToken();
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+    };
+
+    const requestParams: RequestUrlParam = {
+      url: theUrl,
+      method: "PATCH",
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+      headers: headers,
+    };
+
+    await requestUrl(requestParams).json;
   };
 
   deleteJson = async (pathFragOrig: string) => {
