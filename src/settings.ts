@@ -672,8 +672,6 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       return this.plugin.i18n.t(x, vars);
     };
 
-    containerEl.createEl("h1", { text: "Remotely Secure" });
-
     //////////////////////////////////////////////////
     // below for service chooser (part 1/2)
     //////////////////////////////////////////////////
