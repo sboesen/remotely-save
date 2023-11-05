@@ -299,7 +299,6 @@ export default class RemotelySavePlugin extends Plugin {
         this.settings.skipSizeLargerThan,
         this.settings.password
       );
-      log.info(plan.mixedStates); // for debugging
       await insertSyncPlanRecordByVault(this.db, plan, this.vaultRandomID);
 
       // The operations above are almost read only and kind of safe.
