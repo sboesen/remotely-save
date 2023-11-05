@@ -1,6 +1,4 @@
 import { Vault } from "obsidian";
-import * as path from "path";
-
 import { base32, base64url } from "rfc4648";
 import XRegExp from "xregexp";
 import emojiRegex from "emoji-regex";
@@ -28,7 +26,7 @@ export const isHiddenPath = (
   if (!(dot || underscore)) {
     throw Error("parameter error for isHiddenPath");
   }
-  const k = path.posix.normalize(item); // TODO: only unix path now
+  const k = normalizePath(item); // TODO: only unix path now
   const k2 = k.split("/"); // TODO: only unix path now
   // log.info(k2)
   for (const singlePart of k2) {
@@ -44,6 +42,58 @@ export const isHiddenPath = (
   }
   return false;
 };
+
+/**
+ * Normalizes a path
+ * @param path
+ */
+export const normalizePath = (
+  path: string
+) => {
+  if (!(path)) {
+    throw Error("missing path for normalizePath")
+  }
+  // Replace backslashes with forward slashes
+  path = path.replace(/\\/g, '/');
+
+  // Remove duplicate slashes (e.g., '//' -> '/')
+  path = path.replace(/\/\/+/g, '/');
+
+  // Resolve '../' and './' in the path
+  const parts = path.split('/');
+  const result = [];
+  for (const part of parts) {
+    if (part === '..') {
+      result.pop();
+    } else if (part !== '.' && part !== '') {
+      result.push(part);
+    }
+  }
+
+  // Join parts back together with '/' as the separator
+  return result.join('/');
+}
+
+export const dirname = (path: string) => {
+  // Normalize the path to use forward slashes
+  path = path.replace(/\\/g, '/');
+
+  // Split the path into parts using forward slash as the separator
+  const parts = path.split('/');
+
+  // Remove the last part (file or directory name)
+  parts.pop();
+
+  // Join the remaining parts to get the dirname
+  const dirname = parts.join('/');
+
+  // Handle the case where the path was empty or only contained a root slash
+  if (dirname === '' || dirname === '/' || dirname === '.') {
+    return '/';
+  }
+
+  return dirname;
+}
 
 /**
  * Util func for mkdir -p based on the "path" of original file or folder
@@ -201,7 +251,7 @@ export const getPathFolder = (a: string) => {
   if (a.endsWith("/")) {
     return a;
   }
-  const b = path.posix.dirname(a);
+  const b = dirname(a);
   return b.endsWith("/") ? b : `${b}/`;
 };
 
@@ -212,7 +262,7 @@ export const getPathFolder = (a: string) => {
  * @returns
  */
 export const getParentFolder = (a: string) => {
-  const b = path.posix.dirname(a);
+  const b = dirname(a);
   if (b === "." || b === "/") {
     // the root
     return "/";

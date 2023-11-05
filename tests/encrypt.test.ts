@@ -1,7 +1,6 @@
 import * as chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import * as fs from "fs";
-import * as path from "path";
 import {
   decryptArrayBuffer,
   decryptBase32ToString,

@@ -2,7 +2,9 @@ import delay from "delay";
 import { Dropbox, DropboxAuth } from "dropbox";
 import type { files, DropboxResponseError, DropboxResponse } from "dropbox";
 import { Vault } from "obsidian";
-import * as path from "path";
+import {
+  dirname
+} from "./misc";
 import {
   DropboxConfig,
   RemoteItem,
@@ -125,7 +127,7 @@ const fixLastModifiedTimeInplace = (allFilesFolders: RemoteItem[]) => {
         item.lastModified = potentialMTime[item.key];
       }
     }
-    const parent = `${path.posix.dirname(item.key)}/`;
+    const parent = `${dirname(item.key)}/`;
     if (item.lastModified !== undefined) {
       if (parent in potentialMTime) {
         potentialMTime[parent] = Math.max(
@@ -151,7 +153,7 @@ const fixLastModifiedTimeInplace = (allFilesFolders: RemoteItem[]) => {
     if (item.lastModified !== undefined) {
       continue; // don't need to deal with it
     }
-    const parent = `${path.posix.dirname(item.key)}/`;
+    const parent = `${dirname(item.key)}/`;
     if (parent in potentialMTime) {
       item.lastModified = potentialMTime[parent];
     } else {
