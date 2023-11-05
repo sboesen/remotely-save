@@ -485,51 +485,30 @@ export class WrappedOnedriveClient {
   deleteJson = async (pathFragOrig: string) => {
     const theUrl = this.buildUrl(pathFragOrig);
     log.debug(`deleteJson, theUrl=${theUrl}`);
-    if (VALID_REQURL) {
-      await requestUrl({
-        url: theUrl,
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
-        },
-      });
-    } else {
-      await fetch(theUrl, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
-        },
-      });
-    }
+    await requestUrl({
+      url: theUrl,
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
+      },
+    });
   };
 
   putArrayBuffer = async (pathFragOrig: string, payload: ArrayBuffer) => {
     const theUrl = this.buildUrl(pathFragOrig);
     log.debug(`putArrayBuffer, theUrl=${theUrl}`);
     // TODO:
-    // 20220401: On Android, requestUrl has issue that text becomes base64.
-    // Use fetch everywhere instead!
-    if (false /*VALID_REQURL*/) {
-      await requestUrl({
-        url: theUrl,
-        method: "PUT",
-        body: payload,
-        contentType: DEFAULT_CONTENT_TYPE,
-        headers: {
-          "Content-Type": DEFAULT_CONTENT_TYPE,
-          Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
-        },
-      });
-    } else {
-      await fetch(theUrl, {
-        method: "PUT",
-        body: payload,
-        headers: {
-          "Content-Type": DEFAULT_CONTENT_TYPE,
-          Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
-        },
-      });
-    }
+    // Removed fallback from requestUrl on platforms where implementation differs.
+    await requestUrl({
+      url: theUrl,
+      method: "PUT",
+      body: payload,
+      contentType: DEFAULT_CONTENT_TYPE,
+      headers: {
+        "Content-Type": DEFAULT_CONTENT_TYPE,
+        Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
+      },
+    });
   };
 
   /**
@@ -554,35 +533,19 @@ export class WrappedOnedriveClient {
       }, len=${rangeEnd - rangeStart}, size=${size}`
     );
     // NO AUTH HEADER here!
-    // TODO:
-    // 20220401: On Android, requestUrl has issue that text becomes base64.
-    // Use fetch everywhere instead!
-    if (false /*VALID_REQURL*/) {
-      const res = await requestUrl({
-        url: theUrl,
-        method: "PUT",
-        body: bufferToArrayBuffer(payload.subarray(rangeStart, rangeEnd)),
-        contentType: DEFAULT_CONTENT_TYPE,
-        headers: {
-          // no "Content-Length" allowed here
-          "Content-Range": `bytes ${rangeStart}-${rangeEnd - 1}/${size}`,
-          /* "Cache-Control": "no-cache", not allowed here!!! */
-        },
-      });
-      return res.json as DriveItem | UploadSession;
-    } else {
-      const res = await fetch(theUrl, {
-        method: "PUT",
-        body: payload.subarray(rangeStart, rangeEnd),
-        headers: {
-          "Content-Length": `${rangeEnd - rangeStart}`,
-          "Content-Range": `bytes ${rangeStart}-${rangeEnd - 1}/${size}`,
-          "Content-Type": DEFAULT_CONTENT_TYPE,
-          /* "Cache-Control": "no-cache", not allowed here!!! */
-        },
-      });
-      return (await res.json()) as DriveItem | UploadSession;
-    }
+    // Removed fallback from requestUrl on platforms where implementation differs.
+    const res = await requestUrl({
+      url: theUrl,
+      method: "PUT",
+      body: bufferToArrayBuffer(payload.subarray(rangeStart, rangeEnd)),
+      contentType: DEFAULT_CONTENT_TYPE,
+      headers: {
+        // no "Content-Length" allowed here
+        "Content-Range": `bytes ${rangeStart}-${rangeEnd - 1}/${size}`,
+        /* "Cache-Control": "no-cache", not allowed here!!! */
+      },
+    });
+    return res.json as DriveItem | UploadSession;
   };
 }
 
@@ -811,19 +774,13 @@ const downloadFromRemoteRaw = async (
     `${key}?$select=@microsoft.graph.downloadUrl`
   );
   const downloadUrl: string = rsp["@microsoft.graph.downloadUrl"];
-  if (VALID_REQURL) {
-    const content = (
-      await requestUrl({
-        url: downloadUrl,
-        headers: { "Cache-Control": "no-cache" },
-      })
-    ).arrayBuffer;
-    return content;
-  } else {
-    const content = await // cannot set no-cache here, will have cors error
-    (await fetch(downloadUrl)).arrayBuffer();
-    return content;
-  }
+  const content = (
+    await requestUrl({
+      url: downloadUrl,
+      headers: { "Cache-Control": "no-cache" },
+    })
+  ).arrayBuffer;
+  return content;
 };
 
 export const downloadFromRemote = async (

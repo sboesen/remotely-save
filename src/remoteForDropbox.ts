@@ -1,7 +1,7 @@
 import delay from "delay";
 import { Dropbox, DropboxAuth } from "dropbox";
 import type { files, DropboxResponseError, DropboxResponse } from "dropbox";
-import { Vault } from "obsidian";
+import { Vault, requestUrl, RequestUrlParam } from "obsidian";
 import {
   dirname
 } from "./misc";
@@ -214,16 +214,20 @@ export const sendAuthReq = async (
   verifier: string,
   authCode: string
 ) => {
-  const resp1 = await fetch("https://api.dropboxapi.com/oauth2/token", {
-    method: "POST",
-    body: new URLSearchParams({
-      code: authCode,
-      grant_type: "authorization_code",
-      code_verifier: verifier,
-      client_id: appKey,
-      redirect_uri: `obsidian://${COMMAND_CALLBACK_DROPBOX}`,
-    }),
+  const body = new URLSearchParams({
+    code: authCode,
+    grant_type: "authorization_code",
+    code_verifier: verifier,
+    client_id: appKey,
+    redirect_uri: `obsidian://${COMMAND_CALLBACK_DROPBOX}`,
   });
+
+  const requestParams: RequestUrlParam = {
+    url: "https://api.dropboxapi.com/oauth2/token",
+    method: "POST",
+    body: body.toString(), // Convert URLSearchParams to a string
+  };
+  const resp1 = await requestUrl(requestParams);
   const resp2 = (await resp1.json()) as DropboxSuccessAuthRes;
   return resp2;
 };
@@ -233,16 +237,20 @@ export const sendRefreshTokenReq = async (
   refreshToken: string
 ) => {
   log.info("start auto getting refreshed Dropbox access token.");
-  const resp1 = await fetch("https://api.dropboxapi.com/oauth2/token", {
-    method: "POST",
-    body: new URLSearchParams({
-      grant_type: "refresh_token",
-      refresh_token: refreshToken,
-      client_id: appKey,
-    }),
+  const body = new URLSearchParams({
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+    client_id: appKey,
   });
+
+  const requestParams: RequestUrlParam = {
+    url: "https://api.dropboxapi.com/oauth2/token",
+    method: "POST",
+    body: body.toString(), // Convert URLSearchParams to a string
+  };
+
+  const resp1 = await requestUrl(requestParams);
   const resp2 = (await resp1.json()) as DropboxSuccessAuthRes;
-  log.info("finish auto getting refreshed Dropbox access token.");
   return resp2;
 };
 

@@ -75,39 +75,6 @@ if (VALID_REQURL) {
     }
   );
 }
-// getPatcher().patch("request", (options: any) => {
-//   // console.log("using fetch");
-//   const r = fetch(options.url, {
-//     method: options.method,
-//     body: options.data as any,
-//     headers: options.headers,
-//     signal: options.signal,
-//   })
-//     .then((rsp) => {
-//       if (options.responseType === undefined) {
-//         return Promise.all([undefined, rsp]);
-//       }
-//       if (options.responseType === "json") {
-//         return Promise.all([rsp.json(), rsp]);
-//       }
-//       if (options.responseType === "text") {
-//         return Promise.all([rsp.text(), rsp]);
-//       }
-//       if (options.responseType === "arraybuffer") {
-//         return Promise.all([rsp.arrayBuffer(), rsp]);
-//       }
-//     })
-//     .then(([d, r]) => {
-//       return {
-//         data: d,
-//         status: r.status,
-//         statusText: r.statusText,
-//         headers: r.headers,
-//       };
-//     });
-//   // console.log("using fetch");
-//   return r;
-// });
 import { AuthType, BufferLike, createClient } from "webdav/web";
 export type { WebDAVClient } from "webdav/web";
 
