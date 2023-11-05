@@ -1,15 +1,9 @@
-import { Vault } from "obsidian";
+import { Vault, moment } from "obsidian";
 import { base32, base64url } from "rfc4648";
 import XRegExp from "xregexp";
 import emojiRegex from "emoji-regex";
 
 import { log } from "./moreOnLog";
-
-declare global {
-  interface Window {
-    moment: (...data: any) => any;
-  }
-}
 
 /**
  * If any part of the file starts with '.' or '_' then it's a hidden file.
@@ -392,7 +386,7 @@ export const unixTimeToStr = (x: number | undefined | null) => {
   if (x === undefined || x === null || Number.isNaN(x)) {
     return undefined;
   }
-  return window.moment(x).format() as string;
+  return moment.default(x).format() as string;
 };
 
 /**
