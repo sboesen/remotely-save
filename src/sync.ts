@@ -1126,7 +1126,6 @@ const dispatchOperationToActual = async (
     }
     await clearDeleteRenameHistoryOfKeyAndVault(db, r.key, vaultRandomID);
   } else if (r.decision === "downloadRemoteToLocal") {
-    await mkdirpInVault(r.key, vault); /* should be unnecessary */
     await client.downloadFromRemote(
       r.key,
       vault,
