@@ -107,22 +107,6 @@ export const sendAuthReq = async (
   authCode: string,
   verifier: string
 ) => {
-  // // original code snippets for references
-  // const authResponse = await pca.acquireTokenByCode({
-  //   redirectUri: REDIRECT_URI,
-  //   scopes: SCOPES,
-  //   code: authCode,
-  //   codeVerifier: verifier, // PKCE Code Verifier
-  // });
-  // log.info('authResponse')
-  // log.info(authResponse)
-  // return authResponse;
-
-  // Because of the CORS problem,
-  // we need to construct raw request using Obsidian request,
-  // instead of using msal
-  // https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow
-  // https://docs.microsoft.com/en-us/onedrive/developer/rest-api/getting-started/graph-oauth?view=odsp-graph-online#code-flow
   const rsp1 = await requestUrl({
     url: `${authority}/oauth2/v2.0/token`,
     method: "POST",
@@ -139,7 +123,6 @@ export const sendAuthReq = async (
   });
 
   const rsp2 = rsp1.json;
-  // log.info(rsp2);
 
   if (rsp2.error !== undefined) {
     return rsp2 as AccessCodeResponseFailedType;
@@ -170,7 +153,6 @@ export const sendRefreshTokenReq = async (
   };
   
   const rsp = await requestUrl(requestParams).json;
-  // log.info(rsp2);
 
   if (rsp.error !== undefined) {
     return rsp as AccessCodeResponseFailedType;
@@ -184,7 +166,6 @@ export const setConfigBySuccessfullAuthInplace = async (
   authRes: AccessCodeResponseSuccessfulType,
   saveUpdatedConfigFunc: () => Promise<any> | undefined
 ) => {
-  log.info("start updating local info of OneDrive token");
   config.accessToken = authRes.access_token;
   config.accessTokenExpiresAtTime =
     Date.now() + authRes.expires_in - 5 * 60 * 1000;
@@ -198,8 +179,6 @@ export const setConfigBySuccessfullAuthInplace = async (
   if (saveUpdatedConfigFunc !== undefined) {
     await saveUpdatedConfigFunc();
   }
-
-  log.info("finish updating local info of Onedrive token");
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -363,7 +342,6 @@ class MyAuthProvider implements AuthenticationProvider {
       this.onedriveConfig.accessTokenExpiresAtTime =
         currentTs + r2.expires_in * 1000 - 60 * 2 * 1000;
       await this.saveUpdatedConfigFunc();
-      log.info("Onedrive accessToken updated");
       return this.onedriveConfig.accessToken;
     }
   };
@@ -397,26 +375,18 @@ export class WrappedOnedriveClient {
     }
 
     // check vault folder
-    // log.info(`checking remote has folder /${this.remoteBaseDir}`);
-    if (this.vaultFolderExists) {
-      // log.info(`already checked, /${this.remoteBaseDir} exist before`)
-    } else {
+    if (!this.vaultFolderExists) {
       const k = await this.getJson("/drive/special/approot/children");
-      // log.debug(k);
       this.vaultFolderExists =
         (k.value as DriveItem[]).filter((x) => x.name === this.remoteBaseDir)
           .length > 0;
       if (!this.vaultFolderExists) {
-        log.info(`remote does not have folder /${this.remoteBaseDir}`);
         await this.postJson("/drive/special/approot/children", {
           name: `${this.remoteBaseDir}`,
           folder: {},
           "@microsoft.graph.conflictBehavior": "replace",
         });
-        log.info(`remote folder /${this.remoteBaseDir} created`);
         this.vaultFolderExists = true;
-      } else {
-        // log.info(`remote folder /${this.remoteBaseDir} exists`);
       }
     }
   };
@@ -476,7 +446,6 @@ export class WrappedOnedriveClient {
 
   patchJson = async (pathFragOrig: string, payload: any) => {
     const theUrl = this.buildUrl(pathFragOrig);
-    log.debug(`patchJson, theUrl=${theUrl}`);
     const accessToken = await this.authGetter.getAccessToken();
     const headers = {
       Authorization: `Bearer ${accessToken}`,
@@ -594,7 +563,6 @@ export const listFromRemote = async (
     `/drive/special/approot:/${client.remoteBaseDir}:/delta`
   );
   let driveItems = res.value as DriveItem[];
-  // log.debug(driveItems);
 
   while (NEXT_LINK_KEY in res) {
     res = await client.getJson(res[NEXT_LINK_KEY]);
@@ -623,14 +591,11 @@ export const getRemoteMeta = async (
 ) => {
   await client.init();
   const remotePath = getOnedrivePath(fileOrFolderPath, client.remoteBaseDir);
-  // log.info(`remotePath=${remotePath}`);
   const rsp = await client.getJson(
     `${remotePath}?$select=cTag,eTag,fileSystemInfo,folder,file,name,parentReference,size`
   );
-  // log.info(rsp);
   const driveItem = rsp as DriveItem;
   const res = fromDriveItemToRemoteItem(driveItem, client.remoteBaseDir);
-  // log.info(res);
   return res;
 };
 
@@ -697,7 +662,6 @@ export const uploadToRemote = async (
         })}`,
         arrBufRandom
       );
-      // log.info(uploadResult)
       const res = await getRemoteMeta(client, uploadFile);
       return res;
     }

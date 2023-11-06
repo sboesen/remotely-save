@@ -71,11 +71,9 @@ const migrateDBsFrom20211114To20220108 = async (
 ) => {
   const oldVer = 20211114;
   const newVer = 20220108;
-  log.debug(`start upgrading internal db from ${oldVer} to ${newVer}`);
 
   const allPromisesToWait: Promise<any>[] = [];
 
-  log.debug("assign vault id to any delete history");
   const keysInDeleteHistoryTbl = await db.fileHistoryTbl.keys();
   for (const key of keysInDeleteHistoryTbl) {
     if (key.startsWith(vaultRandomID)) {
@@ -95,7 +93,6 @@ const migrateDBsFrom20211114To20220108 = async (
     allPromisesToWait.push(db.fileHistoryTbl.removeItem(key));
   }
 
-  log.debug("assign vault id to any sync mapping");
   const keysInSyncMappingTbl = await db.syncMappingTbl.keys();
   for (const key of keysInSyncMappingTbl) {
     if (key.startsWith(vaultRandomID)) {
@@ -115,7 +112,6 @@ const migrateDBsFrom20211114To20220108 = async (
     allPromisesToWait.push(db.syncMappingTbl.removeItem(key));
   }
 
-  log.debug("assign vault id to any sync plan records");
   const keysInSyncPlansTbl = await db.syncPlansTbl.keys();
   for (const key of keysInSyncPlansTbl) {
     if (key.startsWith(vaultRandomID)) {
@@ -133,11 +129,8 @@ const migrateDBsFrom20211114To20220108 = async (
     allPromisesToWait.push(db.syncPlansTbl.removeItem(key));
   }
 
-  log.debug("finally update version if everything is ok");
   await Promise.all(allPromisesToWait);
   await db.versionTbl.setItem("version", newVer);
-
-  log.debug(`finish upgrading internal db from ${oldVer} to ${newVer}`);
 };
 
 /**
@@ -152,9 +145,7 @@ const migrateDBsFrom20220108To20220326 = async (
 ) => {
   const oldVer = 20220108;
   const newVer = 20220326;
-  log.debug(`start upgrading internal db from ${oldVer} to ${newVer}`);
   await db.versionTbl.setItem("version", newVer);
-  log.debug(`finish upgrading internal db from ${oldVer} to ${newVer}`);
 };
 
 const migrateDBs = async (
@@ -249,16 +240,10 @@ export const prepareDBs = async (
 
   const originalVersion: number | null = await db.versionTbl.getItem("version");
   if (originalVersion === null) {
-    log.debug(
-      `no internal db version, setting it to ${DEFAULT_DB_VERSION_NUMBER}`
-    );
     await db.versionTbl.setItem("version", DEFAULT_DB_VERSION_NUMBER);
   } else if (originalVersion === DEFAULT_DB_VERSION_NUMBER) {
     // do nothing
   } else {
-    log.debug(
-      `trying to upgrade db version from ${originalVersion} to ${DEFAULT_DB_VERSION_NUMBER}`
-    );
     await migrateDBs(
       db,
       originalVersion,
@@ -267,7 +252,6 @@ export const prepareDBs = async (
     );
   }
 
-  log.info("db connected");
   return {
     db: db,
     vaultRandomID: vaultRandomID,
@@ -275,17 +259,7 @@ export const prepareDBs = async (
 };
 
 export const destroyDBs = async () => {
-  // await localforage.dropInstance({
-  //   name: DEFAULT_DB_NAME,
-  // });
-  // log.info("db deleted");
   const req = indexedDB.deleteDatabase(DEFAULT_DB_NAME);
-  req.onsuccess = (event) => {
-    log.info("db deleted");
-  };
-  req.onblocked = (event) => {
-    log.warn("trying to delete db but it was blocked");
-  };
   req.onerror = (event) => {
     log.error("tried to delete db but something goes wrong!");
     log.error(event);
@@ -328,7 +302,6 @@ export const insertDeleteRecordByVault = async (
   fileOrFolder: TAbstractFile,
   vaultRandomID: string
 ) => {
-  // log.info(fileOrFolder);
   let k: FileFolderHistoryRecord;
   if (fileOrFolder instanceof TFile) {
     k = {
@@ -380,7 +353,6 @@ export const insertRenameRecordByVault = async (
   oldPath: string,
   vaultRandomID: string
 ) => {
-  // log.info(fileOrFolder);
   let k1: FileFolderHistoryRecord;
   let k2: FileFolderHistoryRecord;
   const actionWhen = Date.now();

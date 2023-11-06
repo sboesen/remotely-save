@@ -327,9 +327,6 @@ export const uploadToRemote = async (
         ContentType: contentType,
       },
     });
-    upload.on("httpUploadProgress", (progress) => {
-      // log.info(progress);
-    });
     await upload.done();
 
     return await getRemoteMeta(s3Client, s3Config, uploadFile);

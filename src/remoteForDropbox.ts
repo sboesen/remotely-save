@@ -236,7 +236,6 @@ export const sendRefreshTokenReq = async (
   appKey: string,
   refreshToken: string
 ) => {
-  log.info("start auto getting refreshed Dropbox access token.");
   const body = new URLSearchParams({
     grant_type: "refresh_token",
     refresh_token: refreshToken,
@@ -259,8 +258,6 @@ export const setConfigBySuccessfullAuthInplace = async (
   authRes: DropboxSuccessAuthRes,
   saveUpdatedConfigFunc: () => Promise<any> | undefined
 ) => {
-  log.info("start updating local info of Dropbox token");
-
   config.accessToken = authRes.access_token;
   config.accessTokenExpiresInSeconds = parseInt(authRes.expires_in);
   config.accessTokenExpiresAtTime =
@@ -281,7 +278,6 @@ export const setConfigBySuccessfullAuthInplace = async (
     await saveUpdatedConfigFunc();
   }
 
-  log.info("finish updating local info of Dropbox token");
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -412,9 +408,7 @@ export class WrappedDropboxClient {
     }
 
     // check vault folder
-    // log.info(`checking remote has folder /${this.remoteBaseDir}`);
     if (this.vaultFolderExists) {
-      // log.info(`already checked, /${this.remoteBaseDir} exist before`)
     } else {
       const res = await this.dropbox.filesListFolder({
         path: "",
@@ -427,8 +421,6 @@ export class WrappedDropboxClient {
         }
       }
       if (!this.vaultFolderExists) {
-        log.info(`remote does not have folder /${this.remoteBaseDir}`);
-
         if (hasEmojiInText(`/${this.remoteBaseDir}`)) {
           throw new Error(
             `/${this.remoteBaseDir}: Error: Dropbox does not support emoji in folder names.`
@@ -438,10 +430,7 @@ export class WrappedDropboxClient {
         await this.dropbox.filesCreateFolderV2({
           path: `/${this.remoteBaseDir}`,
         });
-        log.info(`remote folder /${this.remoteBaseDir} created`);
         this.vaultFolderExists = true;
-      } else {
-        // log.info(`remote folder /${this.remoteBaseDir} exists`);
       }
     }
 
@@ -642,7 +631,6 @@ export const listFromRemote = async (
   if (res.status !== 200) {
     throw Error(JSON.stringify(res));
   }
-  // log.info(res);
 
   const contents = res.result.entries;
   const unifiedContents = contents

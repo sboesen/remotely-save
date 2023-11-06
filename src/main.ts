@@ -143,11 +143,6 @@ export default class RemotelySavePlugin extends Plugin {
     }
 
     try {
-      log.info(
-        `${this.manifest.id
-        }-${Date.now()}: start sync, triggerSource=${triggerSource}`
-      );
-
       if (this.syncRibbon !== undefined) {
         setIcon(this.syncRibbon, iconNameSyncRunning);
         this.syncRibbon.setAttribute(
@@ -169,7 +164,6 @@ export default class RemotelySavePlugin extends Plugin {
         );
       }
 
-      //log.info(`huh ${this.settings.password}`)
       getNotice(
         t("syncrun_step1", {
           maxSteps: `${MAX_STEPS}`,
@@ -195,7 +189,6 @@ export default class RemotelySavePlugin extends Plugin {
         () => self.saveSettings()
       );
       const remoteRsp = await client.listFromRemote();
-      // log.debug(remoteRsp);
 
       getNotice(
         t("syncrun_step3", {
@@ -251,8 +244,6 @@ export default class RemotelySavePlugin extends Plugin {
           this.manifest.id
         );
       }
-      // log.info(local);
-      // log.info(localHistory);
 
       getNotice(
         t("syncrun_step6", {
@@ -335,11 +326,6 @@ export default class RemotelySavePlugin extends Plugin {
         setIcon(this.syncRibbon, iconNameSyncWait);
         this.syncRibbon.setAttribute("aria-label", originLabel);
       }
-
-      log.info(
-        `${this.manifest.id
-        }-${Date.now()}: finish sync, triggerSource=${triggerSource}`
-      );
     } catch (error) {
       const msg = t("syncrun_abort", {
         manifestID: this.manifest.id,
@@ -366,8 +352,6 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   async onload() {
-    log.info(`loading plugin ${this.manifest.id}`);
-
     this.oauth2Info = {
       verifier: "",
       helperModal: undefined,
@@ -719,7 +703,6 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   async onunload() {
-    log.info(`unloading plugin ${this.manifest.id}`);
     this.syncRibbon = undefined;
     if (this.oauth2Info !== undefined) {
       this.oauth2Info.helperModal = undefined;
@@ -855,7 +838,6 @@ export default class RemotelySavePlugin extends Plugin {
         // a real string was assigned before
         vaultRandomID = this.settings.vaultRandomID;
       }
-      log.debug("vaultRandomID is no longer saved in data.json");
       delete this.settings.vaultRandomID;
       await this.saveSettings();
     }
@@ -907,9 +889,6 @@ export default class RemotelySavePlugin extends Plugin {
             // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
             const lastModified = currentFile.stat.mtime;
             const currentTime = Date.now();
-            log.debug(
-              `Checking if file was modified within last ${this.settings.syncOnSaveAfterMilliseconds / 1000} seconds, last modified: ${(currentTime - lastModified) / 1000} seconds ago`
-            );
             if (currentTime - lastModified < this.settings.syncOnSaveAfterMilliseconds) {
               if (!runScheduled) {
                 const scheduleTimeFromNow = this.settings.syncOnSaveAfterMilliseconds - (currentTime - lastModified)

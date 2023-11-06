@@ -19,10 +19,7 @@ interface MessyConfigType {
 export const messyConfigToNormal = (
   x: MessyConfigType | RemotelySavePluginSettings | null | undefined
 ): RemotelySavePluginSettings | null | undefined => {
-  // log.debug("loading, original config on disk:");
-  // log.debug(x);
   if (x === null || x === undefined) {
-    log.debug("the messy config is null or undefined, skip");
     return x as any;
   }
   if ("readme" in x && "d" in x) {
@@ -35,12 +32,8 @@ export const messyConfigToNormal = (
         }) as Buffer
       ).toString("utf-8")
     );
-    // log.debug("loading, parsed config is:");
-    // log.debug(y);
     return y;
   } else {
-    // return as is
-    // log.debug("loading, parsed config is the same");
     return x;
   }
 };
@@ -52,7 +45,6 @@ export const normalConfigToMessy = (
   x: RemotelySavePluginSettings | null | undefined
 ) => {
   if (x === null || x === undefined) {
-    log.debug("the normal config is null or undefined, skip");
     return x;
   }
   const y = {
@@ -63,7 +55,5 @@ export const normalConfigToMessy = (
       })
     ),
   };
-  // log.debug("encoding, encoded config is:");
-  // log.debug(y);
   return y;
 };

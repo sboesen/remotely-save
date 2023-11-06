@@ -168,7 +168,6 @@ export class WrappedWebdavClient {
               : AuthType.Password,
         });
       } else {
-        log.info("no password");
         this.client = createClient(this.webdavConfig.address, {
           headers: headers,
         });
@@ -181,12 +180,9 @@ export class WrappedWebdavClient {
     } else {
       const res = await this.client.exists(`/${this.remoteBaseDir}/`);
       if (res) {
-        // log.info("remote vault folder exits!");
         this.vaultFolderExists = true;
       } else {
-        log.info("remote vault folder not exists, creating");
         await this.client.createDirectory(`/${this.remoteBaseDir}/`);
-        log.info("remote vault folder created!");
         this.vaultFolderExists = true;
       }
     }
@@ -236,9 +232,6 @@ export class WrappedWebdavClient {
         // save the setting
         if (this.saveUpdatedConfigFunc !== undefined) {
           await this.saveUpdatedConfigFunc();
-          log.info(
-            `webdav depth="auto_unknown" is changed to ${this.webdavConfig.depth}`
-          );
         }
       }
     }
@@ -263,7 +256,6 @@ export const getRemoteMeta = async (
 ) => {
   await client.init();
   const remotePath = getWebdavPath(fileOrFolderPath, client.remoteBaseDir);
-  // log.info(`remotePath = ${remotePath}`);
   const res = (await client.client.stat(remotePath, {
     details: false,
   })) as FileStat;
@@ -307,9 +299,6 @@ export const uploadToRemote = async (
       // if encrypted, upload a fake file with the encrypted file name
       await client.client.putFileContents(uploadFile, "", {
         overwrite: true,
-        onUploadProgress: (progress: any) => {
-          // log.info(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
-        },
       });
 
       return await getRemoteMeta(client, uploadFile);
@@ -339,9 +328,6 @@ export const uploadToRemote = async (
     // }
     await client.client.putFileContents(uploadFile, remoteContent, {
       overwrite: true,
-      onUploadProgress: (progress: any) => {
-        log.info(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
-      },
     });
 
     return await getRemoteMeta(client, uploadFile);
@@ -495,10 +481,8 @@ export const deleteFromRemote = async (
   await client.init();
   try {
     await client.client.deleteFile(remoteFileName);
-    // log.info(`delete ${remoteFileName} succeeded`);
   } catch (err) {
     console.error("some error while deleting");
-    log.info(err);
   }
 };
 

@@ -81,7 +81,6 @@ export const exportVaultSyncPlansToFiles = async (
   vaultRandomID: string,
   toFormat: "table" | "json" = "json"
 ) => {
-  log.info("exporting");
   await mkdirpInVault(DEFAULT_DEBUG_FOLDER, vault);
   const records = await readAllSyncPlanRecordTextsByVault(db, vaultRandomID);
   let md = "";
@@ -104,7 +103,6 @@ export const exportVaultSyncPlansToFiles = async (
   await vault.create(filePath, md, {
     mtime: ts,
   });
-  log.info("finish exporting");
 };
 
 export const exportVaultLoggerOutputToFiles = async (

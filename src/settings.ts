@@ -1542,13 +1542,9 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
                   // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
                   const lastModified = currentFile.stat.mtime;
                   const currentTime = Date.now();
-                  log.debug(
-                    `Checking if file was modified within last ${this.plugin.settings.syncOnSaveAfterMilliseconds / 1000} seconds, last modified: ${(currentTime - lastModified) / 1000} seconds ago`
-                  );
                   if (currentTime - lastModified < this.plugin.settings.syncOnSaveAfterMilliseconds) {
                     if (!runScheduled) {
                       const scheduleTimeFromNow = this.plugin.settings.syncOnSaveAfterMilliseconds - (currentTime - lastModified)
-                      log.info(`schedule a run for ${scheduleTimeFromNow} milliseconds later`)
                       runScheduled = true
                       setTimeout(() => {
                         this.plugin.syncRun("auto")
@@ -1595,8 +1591,6 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
               realVal > 0
             ) {
               const intervalID = window.setInterval(() => {
-                log.info("auto run from settings.ts");
-                console.log("auto run from settings.ts");
                 this.plugin.syncRun("auto");
               }, realVal);
               this.plugin.autoRunIntervalID = intervalID;
@@ -1770,7 +1764,6 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             this.plugin.settings.currLogLevel = val;
             log.setLevel(val as any);
             await this.plugin.saveSettings();
-            log.info(`the log level is changed to ${val}`);
           });
       });
 
@@ -1781,7 +1774,6 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText(t("settings_outputsettingsconsole_button"));
         button.onClick(async () => {
           const c = messyConfigToNormal(await this.plugin.loadData());
-          log.info(c);
           new Notice(t("settings_outputsettingsconsole_notice"));
         });
       });
