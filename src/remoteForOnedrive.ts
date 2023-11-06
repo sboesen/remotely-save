@@ -107,7 +107,7 @@ export const sendAuthReq = async (
   authCode: string,
   verifier: string
 ) => {
-  const rsp1 = await requestUrl({
+  const rsp = await requestUrl({
     url: `${authority}/oauth2/v2.0/token`,
     method: "POST",
     contentType: "application/x-www-form-urlencoded",
@@ -120,14 +120,12 @@ export const sendAuthReq = async (
       grant_type: "authorization_code",
       code_verifier: verifier,
     }).toString(),
-  });
+  }).json;
 
-  const rsp2 = rsp1.json;
-
-  if (rsp2.error !== undefined) {
-    return rsp2 as AccessCodeResponseFailedType;
+  if (rsp.error !== undefined) {
+    return rsp as AccessCodeResponseFailedType;
   } else {
-    return rsp2 as AccessCodeResponseSuccessfulType;
+    return rsp as AccessCodeResponseSuccessfulType;
   }
 };
 
