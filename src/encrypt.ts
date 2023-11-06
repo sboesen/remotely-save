@@ -43,9 +43,6 @@ export const encryptArrayBuffer = async (
   // 12 bytes or 96 bits per GCM spec https://developer.mozilla.org/en-US/docs/Web/API/AesGcmParams
   const iv = window.crypto.getRandomValues(new Uint8Array(12));
 
-  log.error("Encrypt-salt: ", bufferToArrayBuffer(salt));
-  log.error("Encrypt-iv: ", bufferToArrayBuffer(iv));
-
   const keyCrypt = await window.crypto.subtle.importKey(
     "raw",
     derivedKey,
@@ -53,17 +50,14 @@ export const encryptArrayBuffer = async (
     false,
     ["encrypt", "decrypt"]
   );
-  log.error("Encrypt-Key: ", derivedKey);
 
   const enc = (await window.crypto.subtle.encrypt(
     { name: "AES-GCM", iv },
     keyCrypt,
     arrBuf
   )) as ArrayBuffer;
-  log.error("Encryption successful.");
 
   const res = new Uint8Array([...salt, ...iv, ...new Uint8Array(enc)]);
-  log.error("Encryption-ciphertext: ", enc);
 
   return bufferToArrayBuffer(res);
 };
@@ -76,17 +70,11 @@ export const decryptArrayBuffer = async (
   const salt = arrBuf.slice(0, 16); // first 16 bytes are salt
   const iv = arrBuf.slice(16, 28); // next 12 bytes are IV
   const cipherText = arrBuf.slice(28); // final bytes are ciphertext
-  log.error(arrBuf);
-  log.error("arrbuf ^ next salt, iv, ciphertext");
-  log.error(salt);
-  log.error(iv);
-  log.error(cipherText);
   const key = await getKeyFromPassword(
     new Uint8Array(salt),
     password,
     rounds
   );
-  log.error("decKey", key);
 
   const keyCrypt = await window.crypto.subtle.importKey(
     "raw",
@@ -96,13 +84,11 @@ export const decryptArrayBuffer = async (
     ["encrypt", "decrypt"]
   );
 
-  log.error("imported key");
   const dec = (await window.crypto.subtle.decrypt(
     { name: "AES-GCM", iv },
     keyCrypt,
     cipherText
   )) as ArrayBuffer;
-  log.error("decrypted");
 
   return dec;
 };
