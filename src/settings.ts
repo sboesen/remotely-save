@@ -630,12 +630,14 @@ class ExportSettingsQrCodeModal extends Modal {
 }
 
 const wrapTextWithPasswordHide = (text: TextComponent) => {
-  const hider = text.inputEl.insertAdjacentElement("afterend", createSpan());
+  const span = createSpan("Hi!");
+  const hider = text.inputEl.insertAdjacentElement("afterend", span) as HTMLElement;
   // the init type of hider is "hidden" === eyeOff === password
+  setIcon(hider, "eye-off");
   hider.addEventListener("click", (e) => {
     const isText = text.inputEl.getAttribute("type") === "text";
-    let eyeIcon = isText ? "EyeOff" : "Eye";
-    setIcon(hider.parentElement, "Eye");
+    let eyeIcon = isText ? "eye-off" : "eye";
+    setIcon(hider, eyeIcon);
     text.inputEl.setAttribute("type", isText ? "password" : "text");
     text.inputEl.focus();
   });

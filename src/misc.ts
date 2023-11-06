@@ -386,7 +386,7 @@ export const unixTimeToStr = (x: number | undefined | null) => {
   if (x === undefined || x === null || Number.isNaN(x)) {
     return undefined;
   }
-  return moment.default(x).format() as string;
+  return (moment as any)(x).format() as string;
 };
 
 /**

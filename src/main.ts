@@ -3,7 +3,6 @@ import {
   Notice,
   Plugin,
   Setting,
-  addIcon,
   setIcon,
   FileSystemAdapter,
 } from "obsidian";
@@ -95,9 +94,9 @@ interface OAuth2Info {
   revokeAuthSetting?: Setting;
 }
 
-const iconNameSyncWait = "RotateCcw";
-const iconNameSyncRunning = "RefreshCcw";
-const iconNameLogs = "FileText";
+const iconNameSyncWait = "rotate-ccw";
+const iconNameSyncRunning = "refresh-ccw";
+const iconNameLogs = "file-text";
 
 export default class RemotelySavePlugin extends Plugin {
   settings: RemotelySavePluginSettings;
