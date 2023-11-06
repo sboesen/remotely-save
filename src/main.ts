@@ -8,7 +8,6 @@ import {
   FileSystemAdapter,
 } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
-import { createElement, RotateCcw, RefreshCcw, FileText } from "lucide";
 import type {
   FileOrFolderMixedState,
   RemotelySavePluginSettings,
@@ -96,31 +95,9 @@ interface OAuth2Info {
   revokeAuthSetting?: Setting;
 }
 
-const iconNameSyncWait = `remotely-save-sync-wait`;
-const iconNameSyncRunning = `remotely-save-sync-running`;
-const iconNameLogs = `remotely-save-logs`;
-
-const getIconSvg = () => {
-  const iconSvgSyncWait = createElement(RotateCcw);
-  iconSvgSyncWait.setAttribute("width", "100");
-  iconSvgSyncWait.setAttribute("height", "100");
-  const iconSvgSyncRunning = createElement(RefreshCcw);
-  iconSvgSyncRunning.setAttribute("width", "100");
-  iconSvgSyncRunning.setAttribute("height", "100");
-  const iconSvgLogs = createElement(FileText);
-  iconSvgLogs.setAttribute("width", "100");
-  iconSvgLogs.setAttribute("height", "100");
-  const res = {
-    iconSvgSyncWait: iconSvgSyncWait.outerHTML,
-    iconSvgSyncRunning: iconSvgSyncRunning.outerHTML,
-    iconSvgLogs: iconSvgLogs.outerHTML,
-  };
-
-  iconSvgSyncWait.empty();
-  iconSvgSyncRunning.empty();
-  iconSvgLogs.empty();
-  return res;
-};
+const iconNameSyncWait = "RotateCcw";
+const iconNameSyncRunning = "RefreshCcw";
+const iconNameLogs = "FileText";
 
 export default class RemotelySavePlugin extends Plugin {
   settings: RemotelySavePluginSettings;
@@ -391,12 +368,6 @@ export default class RemotelySavePlugin extends Plugin {
 
   async onload() {
     log.info(`loading plugin ${this.manifest.id}`);
-
-    const { iconSvgSyncWait, iconSvgSyncRunning, iconSvgLogs } = getIconSvg();
-
-    addIcon(iconNameSyncWait, iconSvgSyncWait);
-    addIcon(iconNameSyncRunning, iconSvgSyncRunning);
-    addIcon(iconNameLogs, iconSvgLogs);
 
     this.oauth2Info = {
       verifier: "",

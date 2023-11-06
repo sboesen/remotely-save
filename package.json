@@ -74,7 +74,6 @@
     "localforage": "^1.10.0",
     "lodash": "^4.17.21",
     "loglevel": "^1.8.0",
-    "lucide": "^0.35.0",
     "mime-types": "^2.1.35",
     "mustache": "^4.2.0",
     "nanoid": "^3.3.3",

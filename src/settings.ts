@@ -6,9 +6,9 @@ import {
   Setting,
   Platform,
   requireApiVersion,
+  setIcon,
 } from "obsidian";
 import type { TextComponent } from "obsidian";
-import { createElement, Eye, EyeOff } from "lucide";
 import {
   API_VER_REQURL,
   DEFAULT_DEBUG_FOLDER,
@@ -629,23 +629,13 @@ class ExportSettingsQrCodeModal extends Modal {
   }
 }
 
-const getEyesElements = () => {
-  const eyeEl = createElement(Eye);
-  const eyeOffEl = createElement(EyeOff);
-  return {
-    eye: eyeEl.outerHTML,
-    eyeOff: eyeOffEl.outerHTML,
-  };
-};
-
 const wrapTextWithPasswordHide = (text: TextComponent) => {
-  const { eye, eyeOff } = getEyesElements();
   const hider = text.inputEl.insertAdjacentElement("afterend", createSpan());
   // the init type of hider is "hidden" === eyeOff === password
-  hider.innerHTML = eyeOff;
   hider.addEventListener("click", (e) => {
     const isText = text.inputEl.getAttribute("type") === "text";
-    hider.innerHTML = isText ? eyeOff : eye;
+    let eyeIcon = isText ? "EyeOff" : "Eye";
+    setIcon(hider.parentElement, "Eye");
     text.inputEl.setAttribute("type", isText ? "password" : "text");
     text.inputEl.focus();
   });
