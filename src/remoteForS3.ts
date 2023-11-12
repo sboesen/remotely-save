@@ -20,7 +20,7 @@ import {
 // @ts-ignore
 import { requestTimeout } from "@aws-sdk/fetch-http-handler/dist-es/request-timeout";
 import { buildQueryString } from "@aws-sdk/querystring-builder";
-import { HeaderBag, HttpHandlerOptions, Provider } from "@aws-sdk/types";
+import { HttpHandlerOptions } from "@aws-sdk/types";
 import { Buffer } from "buffer";
 import * as mime from "mime-types";
 import { Vault, requestUrl, RequestUrlParam } from "obsidian";
@@ -34,7 +34,6 @@ import {
 } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import {
-  arrayBufferToBuffer,
   bufferToArrayBuffer,
   mkdirpInVault,
 } from "./misc";
