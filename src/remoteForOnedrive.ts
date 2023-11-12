@@ -30,8 +30,8 @@ const REDIRECT_URI = `obsidian://${COMMAND_CALLBACK_ONEDRIVE}`;
 
 export const DEFAULT_ONEDRIVE_CONFIG: OnedriveConfig = {
   accessToken: "",
-  clientID: process.env.DEFAULT_ONEDRIVE_CLIENT_ID,
-  authority: process.env.DEFAULT_ONEDRIVE_AUTHORITY,
+  clientID: "dac010b9-192f-4237-bf53-167d36149942",
+  authority: "https://login.microsoftonline.com/common/",
   refreshToken: "",
   accessTokenExpiresInSeconds: 0,
   accessTokenExpiresAtTime: 0,
@@ -234,10 +234,10 @@ const fromDriveItemToRemoteItem = (
   // possible prefix:
   // pure english: /drive/root:/Apps/remotely-save/${remoteBaseDir}
   // or localized, e.g.: /drive/root:/应用/remotely-save/${remoteBaseDir}
-  const FIRST_COMMON_PREFIX_REGEX = /^\/drive\/root:\/[^\/]+\/remotely-save\//g;
+  const FIRST_COMMON_PREFIX_REGEX = /^\/drive\/root:\/[^\/]+\/Remotely Secure\//g;
   // or the root is absolute path /Livefolders,
   // e.g.: /Livefolders/应用/remotely-save/${remoteBaseDir}
-  const SECOND_COMMON_PREFIX_REGEX = /^\/Livefolders\/[^\/]+\/remotely-save\//g;
+  const SECOND_COMMON_PREFIX_REGEX = /^\/Livefolders\/[^\/]+\/Remotely Secure\//g;
 
   // another possibile prefix
   const THIRD_COMMON_PREFIX_RAW = `/drive/items/`;
