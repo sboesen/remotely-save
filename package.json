@@ -53,7 +53,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.427.0",
     "@aws-sdk/fetch-http-handler": "3.78.0",
-    "@aws-sdk/lib-storage": "3.81.0",
+    "@aws-sdk/lib-storage": "3.449.0",
     "@aws-sdk/protocol-http": "3.78.0",
     "@aws-sdk/querystring-builder": "3.78.0",
     "@aws-sdk/signature-v4-crt": "3.78.0",
