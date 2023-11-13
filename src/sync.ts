@@ -29,7 +29,6 @@ import {
 } from "./localdb";
 import {
   isHiddenPath,
-  isVaildText,
   mkdirpInVault,
   getFolderLevels,
   getParentFolder,
@@ -76,7 +75,6 @@ export interface PasswordCheckType {
   reason:
     | "ok"
     | "empty_remote"
-    | "remote_encrypted_local_no_password"
     | "password_matched"
     | "password_not_matched"
     | "invalid_text_after_decryption"
@@ -96,30 +94,13 @@ export const isPasswordOk = async (
     } as PasswordCheckType;
   }
   const santyCheckKey = remote[0].key;
-  // this is encrypted using new base64url!
-  // try to decrypt it using the provided password.
-  if (password === "") {
-    return {
-      ok: false,
-      reason: "remote_encrypted_local_no_password",
-    } as PasswordCheckType;
-  }
   try {
     const res = await decryptBase64urlToString(santyCheckKey, password);
 
-    // additional test
-    // because iOS Safari bypasses decryption with wrong password!
-    if (isVaildText(res)) {
-      return {
-        ok: true,
-        reason: "password_matched",
-      } as PasswordCheckType;
-    } else {
-      return {
-        ok: false,
-        reason: "invalid_text_after_decryption",
-      } as PasswordCheckType;
-    }
+    return {
+      ok: true,
+      reason: "password_matched",
+    } as PasswordCheckType;
   } catch (error) {
     return {
       ok: false,

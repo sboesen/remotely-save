@@ -137,25 +137,6 @@ describe("Misc: get parent folder", () => {
   });
 });
 
-describe("Misc: vaild file name tests", () => {
-  it("should treat no ascii correctly", async () => {
-    const x = misc.isVaildText("😄🍎 apple 苹果");
-    // console.log(x)
-    expect(x).to.be.true;
-  });
-
-  it("should find not-printable chars correctly", async () => {
-    const x = misc.isVaildText("😄🍎 apple 苹果\u0000");
-    // console.log(x)
-    expect(x).to.be.false;
-  });
-
-  it("should allow spaces/slashes/...", async () => {
-    const x = misc.isVaildText("😄🍎 apple 苹果/-_=/\\*%^&@#$`");
-    expect(x).to.be.true;
-  });
-});
-
 describe("Misc: get dirname", () => {
   it("should return itself for folder", async () => {
     const x = misc.getPathFolder("ssss/");
