@@ -1,6 +1,6 @@
 # Remotely Secure
 
-**Remotely Secure** is a fork of *Remotely Save*, the unofficial sync plugin for Obsidian. The original *Remotely Save* plugin is not actively maintained and has multiple security issues; please see the [list of security updates](#security-updates-from-remotely-save) made to *Remotely Save*. Note this plugin is not backwards compatible with Remotely Save, save your data locally and have a backup before using this plugin. See [migration guide](#migrating-from-remotely-save) instructions.
+**Remotely Secure** is a fork of *Remotely Save*, the unofficial sync plugin for Obsidian. The original *Remotely Save* plugin is not actively maintained and has security issues; please see the [list of security updates](#security-updates-from-remotely-save) made to *Remotely Save*. Note this plugin is not backwards compatible with Remotely Save, save your data locally and have a backup before using this plugin. See [migration guide](#migrating-from-remotely-save) instructions.
 
 If you like it or find it useful, please consider give it a [star ![GitHub Repo stars](https://img.shields.io/github/stars/sboesen/remotely-secure?style=social)](https://github.com/sboesen/remotely-secure) on Github.
 
@@ -17,7 +17,7 @@ If you like it or find it useful, please consider give it a [star ![GitHub Repo 
 * Credit to sampurkiszb@ for Sync on Save
 
 ## Security Updates from Remotely Save
- - Fixed encryption bug resulting in AES-CBC usage using the same IV for all files, which can enable attacks that leak key material.
+ - Fixed [encryption bug](https://github.com/sboesen/remotely-secure/commit/d9ad76e774b0b1cee2b36316058df926f4bfb2bf) resulting in AES-CBC usage using the same IV for all files, which can enable attacks that leak key material.
 - Updated encryption to use AES-GCM which is more secure and authenticates the ciphertext before decrypting, making it harder to exploit certain padding oracle attacks.
 - Updated salt to random bytes
 - **No security guarantees**, but these are the issues I identified when reviewing the end-to-end encryption as implemented in remotely-save.
