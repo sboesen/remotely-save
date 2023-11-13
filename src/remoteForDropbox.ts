@@ -26,7 +26,7 @@ import { log } from "./moreOnLog";
 
 export const DEFAULT_DROPBOX_CONFIG: DropboxConfig = {
   accessToken: "",
-  clientID: process.env.DEFAULT_DROPBOX_APP_KEY,
+  clientID: "06wqszi8qc5qd70",
   refreshToken: "",
   accessTokenExpiresInSeconds: 0,
   accessTokenExpiresAtTime: 0,
@@ -227,9 +227,8 @@ export const sendAuthReq = async (
     method: "POST",
     body: body.toString(), // Convert URLSearchParams to a string
   };
-  const resp1 = await requestUrl(requestParams);
-  const resp2 = (await resp1.json()) as DropboxSuccessAuthRes;
-  return resp2;
+  const resp = await requestUrl(requestParams);
+  return resp.json as DropboxSuccessAuthRes;
 };
 
 export const sendRefreshTokenReq = async (
@@ -294,7 +293,7 @@ async function retryReq<T>(
   reqFunc: () => Promise<DropboxResponse<T>>,
   extraHint: string = ""
 ): Promise<DropboxResponse<T>> {
-  const waitSeconds = [1, 2, 4, 8]; // hard code exponential backoff
+  const waitSeconds = [2, 4, 8, 16]; // hard code exponential backoff
   for (let idx = 0; idx < waitSeconds.length; ++idx) {
     try {
       if (idx !== 0) {
