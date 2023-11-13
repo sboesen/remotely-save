@@ -18,4 +18,4 @@ The main issue comes from deletions (and renamings which is actually interpreted
 
 If we don't upload any extra info to the remote, there's usually no way for the second device to know what files / folders have been deleted on the first device.
 
-To overcome this issue, from and after version 0.3.0, the plugin uploads extra metadata files `_remotely-save-metadata-on-remote.{json,bin}` to users' configured cloud services. Those files contain some info about what has been deleted on the first device, so that the second device can read the list to apply the deletions to itself. Some other necessary meta info would also be written into the extra files.
+To overcome this issue, from and after version 0.3.0, the plugin uploads extra metadata files `_remotely-secure-metadata-on-remote.{json,bin}` to users' configured cloud services. Those files contain some info about what has been deleted on the first device, so that the second device can read the list to apply the deletions to itself. Some other necessary meta info would also be written into the extra files.
