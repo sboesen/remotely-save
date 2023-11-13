@@ -87,6 +87,8 @@ export interface RemotelySavePluginSettings {
   lang?: LangTypeAndAuto;
   logToDB?: boolean;
   skipSizeLargerThan?: number;
+  enableStatusBarInfo: boolean;
+  lastSuccessSync?: number;
 
   /**
    * @deprecated

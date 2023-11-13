@@ -23,8 +23,6 @@ If you like it or find it useful, please consider give it a [star ![GitHub Repo 
 - **No security guarantees**, but these are the issues I identified when reviewing the end-to-end encryption as implemented in remotely-save.
 
 ## Features
- - Sync on Save (thanks @sampurkiszb)
-
 - Supports:
   - Amazon S3 or S3-compatible
   - Dropbox
@@ -34,6 +32,8 @@ If you like it or find it useful, please consider give it a [star ![GitHub Repo 
 - **Obsidian Mobile supported.** Vaults can be synced across mobile and desktop devices with the cloud service as the "broker".
 - **[End-to-end encryption](./docs/encryption.md) supported.** Files would be encrypted using openssl format before being sent to the cloud **if** user specify a password.
 - **Scheduled auto sync supported.** You can also manually trigger the sync using sidebar ribbon, or using the command from the command palette (or even bind the hot key combination to the command then press the hot key combination).
+- Sync on Save (thanks @sampurkiszb)
+- Sync status bar (thanks @Drumber)
 - **[Minimal Intrusive](./docs/minimal_intrusive_design.md).**
 - **Fully open source under [Apache-2.0 License](./LICENSE).**
 - **[Sync Algorithm open](./docs/sync_algorithm_v2.md) for discussion.**
