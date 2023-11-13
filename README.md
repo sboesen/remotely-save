@@ -1,6 +1,6 @@
 # Remotely Secure
 
-**Remotely Secure** is a fork of *Remotely Save*, the unofficial sync plugin for Obsidian. The original *Remotely Save* plugin is not actively maintained and has multiple security issues; please see the [list of security updates](#security-updates-from-remotely-save) made to *Remotely Save*. Note this plugin is not backwards compatible with Remotely Save, save your data locally and have a backup before using this plugin.
+**Remotely Secure** is a fork of *Remotely Save*, the unofficial sync plugin for Obsidian. The original *Remotely Save* plugin is not actively maintained and has multiple security issues; please see the [list of security updates](#security-updates-from-remotely-save) made to *Remotely Save*. Note this plugin is not backwards compatible with Remotely Save, save your data locally and have a backup before using this plugin. See [migration guide](#migrating-from-remotely-save) instructions.
 
 If you like it or find it useful, please consider give it a [star ![GitHub Repo stars](https://img.shields.io/github/stars/sboesen/remotely-secure?style=social)](https://github.com/sboesen/remotely-secure) on Github.
 
@@ -47,6 +47,15 @@ If you like it or find it useful, please consider give it a [star ![GitHub Repo 
 - **You should protect your `data.json` file.** The file contains sensitive information.
   - It's strongly advised **NOT** to share your `data.json` file to anyone.
   - It's usually **NOT** a good idea to check the file into version control. By default, the plugin tries to create a `.gitignore` file inside the plugin directory if it doesn't exist, for ignoring `data.json` in the `git` version control. If you know exactly what it means and want to remove the setting, please modify the `.gitignore` file or set it to be empty.
+
+## Migrating from Remotely Save
+The easiest way to migrate from Remotely Save (or other forks) to Remotely Secure is:
+
+1. Make a local, unencrypted backup of your files (make sure to synchronize all changes across your devices)
+2. Disable the remotely-save plugin
+3. Enable remotely-secure and set a new encryption password
+4. Delete the encrypted files in your cloud provider (or make a new S3 bucket in this case)
+5. Perform a sync using remotely-secure
 
 ## Questions, Suggestions, Or Bugs
 
