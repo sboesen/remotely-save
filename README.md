@@ -18,8 +18,8 @@ If you like it or find it useful, please consider give it a [star ![GitHub Repo 
 
 ## Security Updates from Remotely Save
  - Fixed [encryption bug](https://github.com/sboesen/remotely-secure/commit/d9ad76e774b0b1cee2b36316058df926f4bfb2bf) resulting in AES-CBC usage using the same IV for all files, which can enable attacks that leak key material.
-- Updated encryption to use AES-GCM which is more secure and authenticates the ciphertext before decrypting, making it harder to exploit certain padding oracle attacks.
-- Updated salt to random bytes
+- Updated encryption to use [AES-GCM](https://github.com/sboesen/remotely-secure/commit/d9ad76e774b0b1cee2b36316058df926f4bfb2bf#diff-6ce8b79e4237671498e2b10caa08b379beaae2cd5e56415167b563d1536f6b74R57) which is more secure and authenticates the ciphertext before decrypting, making it harder to exploit certain padding oracle attacks.
+- Updated [salt](https://github.com/sboesen/remotely-secure/commit/d9ad76e774b0b1cee2b36316058df926f4bfb2bf#diff-6ce8b79e4237671498e2b10caa08b379beaae2cd5e56415167b563d1536f6b74R45) to random bytes every time. [See note](https://github.com/sboesen/remotely-secure/issues/9)
 - **No security guarantees**, but these are the issues I identified when reviewing the end-to-end encryption as implemented in remotely-save.
 
 ## Features
