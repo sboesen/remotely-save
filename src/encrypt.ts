@@ -151,9 +151,11 @@ export const getSizeFromOrigToEnc = (x: number) => {
   if (x < 0 || Number.isNaN(x) || !Number.isInteger(x)) {
     throw Error(`getSizeFromOrigToEnc: x=${x} is not a valid size`);
   }
-  return (Math.floor(x / 16) + 1) * 16 + 16;
+  // plaintext size + salt + GCM authN tag + IV
+  return x + 16 + 16 + 12;
 };
 
+// This is only used in tests, but should be fixed.
 export const getSizeFromEncToOrig = (x: number) => {
   if (x < 32 || Number.isNaN(x) || !Number.isInteger(x)) {
     throw Error(`getSizeFromEncToOrig: ${x} is not a valid size`);
