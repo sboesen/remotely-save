@@ -248,7 +248,7 @@ export const sendRefreshTokenReq = async (
   };
 
   const resp1 = await requestUrl(requestParams);
-  const resp2 = (await resp1.json()) as DropboxSuccessAuthRes;
+  const resp2 = (await resp1.json) as DropboxSuccessAuthRes;
   return resp2;
 };
 
