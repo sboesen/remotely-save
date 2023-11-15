@@ -12,9 +12,6 @@ If you like it or find it useful, please consider give it a [star ![GitHub Repo 
 
 **ALWAYS, ALWAYS, backup your vault before using this plugin.**
 
-## Credit
-* Credit to fyears@ for the original Remotely Save plugin
-* Credit to sampurkiszb@ for Sync on Save
 
 ## Security Updates from Remotely Save
  - Fixed [encryption bug](https://github.com/sboesen/remotely-secure/commit/d9ad76e774b0b1cee2b36316058df926f4bfb2bf) resulting in AES-CBC usage using the same IV for all files, which can enable attacks that leak key material.
@@ -32,9 +29,9 @@ If you like it or find it useful, please consider give it a [star ![GitHub Repo 
 - **Obsidian Mobile supported.** Vaults can be synced across mobile and desktop devices with the cloud service as the "broker".
 - **[End-to-end encryption](./docs/encryption.md) supported.** Files would be encrypted using openssl format before being sent to the cloud **if** user specify a password.
 - **Scheduled auto sync supported.** You can also manually trigger the sync using sidebar ribbon, or using the command from the command palette (or even bind the hot key combination to the command then press the hot key combination).
-- Sync on Save (thanks @sampurkiszb)
-- Sync status bar (thanks @Drumber)
-- Syncing bookmarks by default (and other obsidian configuration files if enabled) (thanks @zaiziw)
+- Sync on Save
+- Sync status bar
+- Syncing bookmarks by default (and other obsidian configuration files if enabled)
 - **[Minimal Intrusive](./docs/minimal_intrusive_design.md).**
 - **Fully open source under [Apache-2.0 License](./LICENSE).**
 - **[Sync Algorithm open](./docs/sync_algorithm_v2.md) for discussion.**
@@ -57,6 +54,11 @@ The easiest way to migrate from Remotely Save (or other forks) to Remotely Secur
 3. Enable remotely-secure and set a new encryption password
 4. Delete the encrypted files in your cloud provider (or make a new S3 bucket in this case)
 5. Perform a sync using remotely-secure
+
+## Credit
+* Credit to @fyears for the original Remotely Save plugin
+* Credit to @sampurkiszb for sync on save
+* Credit to @zaiziw for Obsidian bookmark sync
 
 ## Questions, Suggestions, Or Bugs
 
