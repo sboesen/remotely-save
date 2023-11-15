@@ -34,6 +34,7 @@ If you like it or find it useful, please consider give it a [star ![GitHub Repo 
 - **Scheduled auto sync supported.** You can also manually trigger the sync using sidebar ribbon, or using the command from the command palette (or even bind the hot key combination to the command then press the hot key combination).
 - Sync on Save (thanks @sampurkiszb)
 - Sync status bar (thanks @Drumber)
+- Syncing bookmarks by default (and other obsidian configuration files if enabled) (thanks @zaiziw)
 - **[Minimal Intrusive](./docs/minimal_intrusive_design.md).**
 - **Fully open source under [Apache-2.0 License](./LICENSE).**
 - **[Sync Algorithm open](./docs/sync_algorithm_v2.md) for discussion.**
