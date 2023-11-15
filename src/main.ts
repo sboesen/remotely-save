@@ -240,14 +240,11 @@ export default class RemotelySavePlugin extends Plugin {
         this.db,
         this.vaultRandomID
       );
-      let localConfigDirContents: ObsConfigDirFileType[] = undefined;
-      if (this.settings.syncConfigDir) {
-        localConfigDirContents = await listFilesInObsFolder(
+      let localConfigDirContents: ObsConfigDirFileType[] = await listFilesInObsFolder(
           this.app.vault.configDir,
           this.app.vault,
           this.manifest.id
-        );
-      }
+      );
 
       getNotice(
         t("syncrun_step6", {

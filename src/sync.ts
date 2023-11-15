@@ -44,6 +44,7 @@ import {
   deserializeMetadataOnRemote,
   DEFAULT_FILE_NAME_FOR_METADATAONREMOTE,
   DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2,
+  FILE_NAME_FOR_BOOKMARK_FILE,
   isEqualMetadataOnRemote,
 } from "./metadataOnRemote";
 import { isInsideObsFolder, ObsConfigDirFileType } from "./obsFolderLister";
@@ -223,12 +224,19 @@ const isSkipItem = (
   if (syncConfigDir && isInsideObsFolder(key, configDir)) {
     return false;
   }
-  return (
+  const shouldSkip = (
     isHiddenPath(key, true, false) ||
     (!syncUnderscoreItems && isHiddenPath(key, false, true)) ||
     key === DEFAULT_FILE_NAME_FOR_METADATAONREMOTE ||
     key === DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2
   );
+  // Special exception for bookmark file, don't skip.
+  if (key === configDir + FILE_NAME_FOR_BOOKMARK_FILE) {
+    return false;
+  }
+  return shouldSkip;
+
+
 };
 
 const ensembleMixedStates = async (
@@ -303,9 +311,13 @@ const ensembleMixedStates = async (
     }
   }
 
-  if (syncConfigDir && localConfigDirContents !== undefined) {
+  if (localConfigDirContents !== undefined) {
     for (const entry of localConfigDirContents) {
       const key = entry.key;
+      // If we're not syncing the config dir and it isn't the bookmark file, skip.
+      if (!syncConfigDir && key != configDir + FILE_NAME_FOR_BOOKMARK_FILE) {
+        continue;
+      }
       let mtimeLocal = Math.max(entry.mtime ?? 0, entry.ctime ?? 0);
       if (Number.isNaN(mtimeLocal) || mtimeLocal === 0) {
         mtimeLocal = undefined;
