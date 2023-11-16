@@ -142,7 +142,7 @@ export default class RemotelySavePlugin extends Plugin {
         new Notice(prefix + x, timeout);
       }
     };
-    if (this.syncStatus !== "idle") {
+    if (this.syncStatus !== "idle" && triggerSource == "manual") {
       // here the notice is shown regardless of triggerSource
 
       new Notice(
