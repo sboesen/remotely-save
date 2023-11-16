@@ -95,15 +95,16 @@ export const isPasswordOk = async (
     } as PasswordCheckType;
   }
 
-  const santyCheckKey = remote[0].key;
-  if (password == "" && santyCheckKey == "_remotely-secure-metadata-on-remote.json") {
+  const sanityCheckKey = remote[0].key;
+  // Check if metadata is stored unencrypted if the password is blank
+  if (password == "" && remote.some(item => item.key ==  '_remotely-secure-metadata-on-remote.json')) {
     return {
       ok: true,
       reason: "no_password_both_sides"
     } as PasswordCheckType;
   }
   try {
-    const res = await decryptBase64urlToString(santyCheckKey, password);
+    const res = await decryptBase64urlToString(sanityCheckKey, password);
 
     return {
       ok: true,
