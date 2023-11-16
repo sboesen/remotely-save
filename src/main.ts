@@ -124,6 +124,11 @@ export default class RemotelySavePlugin extends Plugin {
       // no notice in auto mode
       if (triggerSource === "manual" || triggerSource === "dry") {
         if (!this.settings.debugEnabled) {
+          // If not mobile and status bar enabled, return.
+          if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
+            return;
+          }
+
           // Rewrite step 8 to display as step 2
           if (step == 8) {
             step = 2;
@@ -148,7 +153,7 @@ export default class RemotelySavePlugin extends Plugin {
       );
 
       if (this.currSyncMsg !== undefined && this.currSyncMsg !== "") {
-        console.debug(this.currSyncMsg); 
+        log.debug(this.currSyncMsg); 
       }
       return;
     }
@@ -188,6 +193,8 @@ export default class RemotelySavePlugin extends Plugin {
         }), 1
       );
       this.syncStatus = "preparing";
+
+      this.updateStatusBarText(t("syncrun_status_preparing"));
 
       getNotice(
         t("syncrun_step2", {
@@ -280,6 +287,7 @@ export default class RemotelySavePlugin extends Plugin {
         this.settings.skipSizeLargerThan,
         this.settings.password
       );
+
       await insertSyncPlanRecordByVault(this.db, plan, this.vaultRandomID);
 
       // The operations above are almost read only and kind of safe.
@@ -337,6 +345,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.syncStatus = "idle";
 
       this.settings.lastSuccessSync = Date.now();
+      this.updateLastSuccessSyncMsg(this.settings.lastSuccessSync);
 
       if (this.syncRibbon !== undefined) {
         setIcon(this.syncRibbon, iconNameSyncWait);
@@ -980,7 +989,21 @@ export default class RemotelySavePlugin extends Plugin {
     decision: string
   ) {
     const msg = `syncing progress=${i}/${totalCount},decision=${decision},path=${pathName}`;
+    log.debug(msg);
     this.currSyncMsg = msg;
+    this.updateStatusBarText(this.i18n.t("syncrun_status_progress", {
+      current: i.toString(),
+      total: totalCount.toString()
+    }));
+  
+    
+  }
+
+  updateStatusBarText(statusText: string) {
+    if (this.statusBarElement === undefined) return;
+    if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
+      this.statusBarElement.setText(statusText);
+    }
   }
 
   // TODO: Refactor this into misc.ts or elsewhere

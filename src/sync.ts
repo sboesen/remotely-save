@@ -1330,7 +1330,11 @@ export const doActualSync = async (
     `3. upload or download files in parallel, with the desired concurrency=${concurrency}`,
   ];
 
-  let realCounter = 0;
+  log.debug("folderCreationOps: ", folderCreationOps.length,
+  " deletionOps: ", deletionOps.length,
+  " uploadDownloads: ", uploadDownloads.length);
+
+  let realCounter = 1;
 
   for (let i = 0; i < nested.length; ++i) {
     log.debug(logTexts[i]);
