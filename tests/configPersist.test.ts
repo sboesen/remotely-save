@@ -22,7 +22,6 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   } as any,
   password: "password",
   serviceType: "s3",
-  currLogLevel: "info",
   enableStatusBarInfo: true
 };
 

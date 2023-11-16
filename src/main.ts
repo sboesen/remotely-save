@@ -73,7 +73,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   onedrive: DEFAULT_ONEDRIVE_CONFIG,
   password: "",
   serviceType: "s3",
-  currLogLevel: "info",
+  debugEnabled: false,
   // vaultRandomID: "", // deprecated
   autoRunEveryMilliseconds: -1,
   initRunAfterMilliseconds: -1,
@@ -107,7 +107,6 @@ export default class RemotelySavePlugin extends Plugin {
   syncStatus: SyncStatusType;
   statusBarElement: HTMLSpanElement;
   oauth2Info: OAuth2Info;
-  currLogLevel: string;
   currSyncMsg?: string;
   syncRibbon?: HTMLElement;
   autoRunIntervalID?: number;
@@ -120,23 +119,36 @@ export default class RemotelySavePlugin extends Plugin {
       return this.i18n.t(x, vars);
     };
 
-    const getNotice = (x: string, timeout?: number) => {
+    const getNotice = (x: string, step: number, timeout?: number) => {
       // only show notices in manual mode
       // no notice in auto mode
       if (triggerSource === "manual" || triggerSource === "dry") {
-        new Notice(x, timeout);
+        if (!this.settings.debugEnabled) {
+          // Rewrite step 8 to display as step 2
+          if (step == 8) {
+            step = 2;
+          } else if (step > 1 && step < 8) {
+            // Allow all errors ("step -1"). Otherwise skip steps 2 -> 7
+            return;
+          }
+        }
+        // Add "step/x" in notice
+        const prefix = step > -1 ? step + "/" : "";
+        new Notice(prefix + x, timeout);
       }
     };
     if (this.syncStatus !== "idle") {
       // here the notice is shown regardless of triggerSource
+
       new Notice(
         t("syncrun_alreadyrunning", {
           pluginName: this.manifest.name,
           syncStatus: this.syncStatus,
         })
       );
+
       if (this.currSyncMsg !== undefined && this.currSyncMsg !== "") {
-        new Notice(this.currSyncMsg);
+        console.debug(this.currSyncMsg); 
       }
       return;
     }
@@ -158,13 +170,14 @@ export default class RemotelySavePlugin extends Plugin {
         );
       }
 
-      const MAX_STEPS = 8;
+      const MAX_STEPS = this.settings.debugEnabled ? 8 : 2;
 
+      // Step count will be wrong for dry mode, but that's fine. It already was off by 1
       if (triggerSource === "dry") {
         getNotice(
           t("syncrun_step0", {
             maxSteps: `${MAX_STEPS}`,
-          })
+          }), 0
         );
       }
 
@@ -172,14 +185,14 @@ export default class RemotelySavePlugin extends Plugin {
         t("syncrun_step1", {
           maxSteps: `${MAX_STEPS}`,
           serviceType: this.settings.serviceType,
-        })
+        }), 1
       );
       this.syncStatus = "preparing";
 
       getNotice(
         t("syncrun_step2", {
           maxSteps: `${MAX_STEPS}`,
-        })
+        }), 2
       );
       this.syncStatus = "getting_remote_files_list";
       const self = this;
@@ -197,7 +210,7 @@ export default class RemotelySavePlugin extends Plugin {
       getNotice(
         t("syncrun_step3", {
           maxSteps: `${MAX_STEPS}`,
-        })
+        }), 3
       );
       this.syncStatus = "checking_password";
       const passwordCheckResult = await isPasswordOk(
@@ -205,14 +218,14 @@ export default class RemotelySavePlugin extends Plugin {
         this.settings.password
       );
       if (!passwordCheckResult.ok) {
-        getNotice(t("syncrun_passworderr"));
+        getNotice(t("syncrun_passworderr"), -1, 10 * 1000);
         throw Error(passwordCheckResult.reason);
       }
 
       getNotice(
         t("syncrun_step4", {
           maxSteps: `${MAX_STEPS}`,
-        })
+        }), 4
       );
       this.syncStatus = "getting_remote_extra_meta";
       const { remoteStates, metadataFile } = await parseRemoteItems(
@@ -232,7 +245,7 @@ export default class RemotelySavePlugin extends Plugin {
       getNotice(
         t("syncrun_step5", {
           maxSteps: `${MAX_STEPS}`,
-        })
+        }), 5
       );
       this.syncStatus = "getting_local_meta";
       const local = this.app.vault.getAllLoadedFiles();
@@ -249,7 +262,7 @@ export default class RemotelySavePlugin extends Plugin {
       getNotice(
         t("syncrun_step6", {
           maxSteps: `${MAX_STEPS}`,
-        })
+        }), 6
       );
       this.syncStatus = "generating_plan";
       const { plan, sortedKeys, deletions, sizesGoWrong } = await getSyncPlan(
@@ -276,7 +289,7 @@ export default class RemotelySavePlugin extends Plugin {
         getNotice(
           t("syncrun_step7", {
             maxSteps: `${MAX_STEPS}`,
-          })
+          }), 7
         );
 
         this.syncStatus = "syncing";
@@ -311,14 +324,14 @@ export default class RemotelySavePlugin extends Plugin {
         getNotice(
           t("syncrun_step7skip", {
             maxSteps: `${MAX_STEPS}`,
-          })
+          }), 7
         );
       }
 
       getNotice(
         t("syncrun_step8", {
           maxSteps: `${MAX_STEPS}`,
-        })
+        }), 8
       );
       this.syncStatus = "finish";
       this.syncStatus = "idle";
@@ -338,13 +351,13 @@ export default class RemotelySavePlugin extends Plugin {
       });
       log.error(msg);
       log.error(error);
-      getNotice(msg, 10 * 1000);
+      getNotice(msg, -1,  10 * 1000);
       if (error instanceof AggregateError) {
         for (const e of error.errors) {
-          getNotice(e.message, 10 * 1000);
+          getNotice(e.message, -1,  10 * 1000);
         }
       } else {
-        getNotice(error.message, 10 * 1000);
+        getNotice(error.message, -1, 10 * 1000);
       }
       this.syncStatus = "idle";
       if (this.syncRibbon !== undefined) {
@@ -377,8 +390,8 @@ export default class RemotelySavePlugin extends Plugin {
       return this.i18n.t(x, vars);
     };
 
-    if (this.settings.currLogLevel !== undefined) {
-      log.setLevel(this.settings.currLogLevel as any);
+    if (this.settings.debugEnabled) {
+      log.setLevel("debug");
     }
 
     await this.checkIfOauthExpires();

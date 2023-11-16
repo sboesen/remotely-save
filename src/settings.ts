@@ -1770,16 +1770,22 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     debugDiv.createEl("h2", { text: t("settings_debug") });
 
     new Setting(debugDiv)
-      .setName(t("settings_debuglevel"))
-      .setDesc(t("settings_debuglevel_desc"))
+      .setName(t("settings_debug_enabled"))
+      .setDesc(t("settings_debug_enabled_desc"))
       .addDropdown(async (dropdown) => {
-        dropdown.addOption("info", "info");
-        dropdown.addOption("debug", "debug");
+        dropdown.addOption("disable", t("disable"));
+        dropdown.addOption("enable", t("enable"));
         dropdown
-          .setValue(this.plugin.settings.currLogLevel)
+          .setValue(this.plugin.settings.debugEnabled ? "enable" : "disable")
           .onChange(async (val: string) => {
-            this.plugin.settings.currLogLevel = val;
-            log.setLevel(val as any);
+            const debugEnabled = val === "enable";
+            this.plugin.settings.debugEnabled = debugEnabled;
+            if (debugEnabled) {
+              log.setLevel("debug");
+            } else {
+              log.setLevel("info");
+            }
+            
             await this.plugin.saveSettings();
           });
       });

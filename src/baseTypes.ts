@@ -76,7 +76,7 @@ export interface RemotelySavePluginSettings {
   onedrive: OnedriveConfig;
   password: string;
   serviceType: SUPPORTED_SERVICES_TYPE;
-  currLogLevel?: string;
+  debugEnabled?: boolean;
   autoRunEveryMilliseconds?: number;
   initRunAfterMilliseconds?: number;
   syncOnSaveAfterMilliseconds?: number;

@@ -6,7 +6,7 @@ You should disable auto sync to avoid any unexpected running.
 
 ## Set The Output Level To Debug
 
-Go to the plugin settings, scroll down to the section "Debug" -> "alter console log level", and change it from "info" to "debug".
+Go to the plugin settings, scroll down to the section "Debug" -> "enable debug info", and change it from "false" to "true".
 
 ## Enable Saving The Output To DB
 
