@@ -345,6 +345,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.syncStatus = "idle";
 
       this.settings.lastSuccessSync = Date.now();
+      this.saveSettings();
       this.updateLastSuccessSyncMsg(this.settings.lastSuccessSync);
 
       if (this.syncRibbon !== undefined) {
