@@ -97,6 +97,7 @@ export const isPasswordOk = async (
 
   const sanityCheckKey = remote[0].key;
   // Check if metadata is stored unencrypted if the password is blank
+  log.debug("password is blank? ", password == "", " remote has metadata? ", remote.some(item => item.key ==  '_remotely-secure-metadata-on-remote.json'));
   if (password == "" && remote.some(item => item.key ==  '_remotely-secure-metadata-on-remote.json')) {
     return {
       ok: true,
