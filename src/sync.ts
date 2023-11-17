@@ -1010,9 +1010,6 @@ const uploadExtraMeta = async (
   deletions: DeletionOnRemote[],
   password: string = ""
 ) => {
-  if (deletions === undefined || deletions.length === 0) {
-    return;
-  }
 
   const key = DEFAULT_FILE_NAME_FOR_METADATAONREMOTE;
   let remoteEncryptedKey = key;
@@ -1033,7 +1030,8 @@ const uploadExtraMeta = async (
     deletions: deletions,
   };
 
-  if (isEqualMetadataOnRemote(origMetadata, newMetadata)) {
+  // TODO: optimize and/or refactor this. Inefficient until user deletes a file
+  if (origMetadata && origMetadata.deletions.length > 0 && isEqualMetadataOnRemote(origMetadata, newMetadata)) {
     log.debug(
       "metadata are the same, no need to re-generate and re-upload it."
     );
