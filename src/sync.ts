@@ -1215,6 +1215,9 @@ const splitThreeSteps = (syncPlan: SyncPlanType, sortedKeys: string[]) => {
       // pass
     } else if (val.decision === "createFolder") {
       const level = atWhichLevel(key);
+      if (level == undefined) {
+        continue;
+      }
       if (folderCreationOps[level - 1] === undefined) {
         folderCreationOps[level - 1] = [val];
       } else {
@@ -1228,6 +1231,9 @@ const splitThreeSteps = (syncPlan: SyncPlanType, sortedKeys: string[]) => {
       val.decision === "keepRemoteDelHist"
     ) {
       const level = atWhichLevel(key);
+      if (level == undefined) {
+        continue;
+      }
       if (deletionOps[level - 1] === undefined) {
         deletionOps[level - 1] = [val];
       } else {
