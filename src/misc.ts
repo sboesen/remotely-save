@@ -347,7 +347,7 @@ export const atWhichLevel = (x: string) => {
     x === ".." ||
     x.startsWith("/")
   ) {
-    throw Error(`do not know which level for ${x}`);
+    log.error(`do not know which level for ${x}`);
   }
   let y = x;
   if (x.endsWith("/")) {
