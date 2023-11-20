@@ -5,11 +5,11 @@ import {
   Setting,
   setIcon,
   FileSystemAdapter,
-  Platform
+  Platform, TAbstractFile
 } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
 import type {
-  FileOrFolderMixedState,
+  FileOrFolderMixedState, RemoteItem,
   RemotelySavePluginSettings,
   SyncTriggerSourceType,
 } from "./baseTypes";
@@ -29,7 +29,7 @@ import {
   InternalDBs,
   insertLoggerOutputByVault,
   clearExpiredLoggerOutputRecords,
-  clearExpiredSyncPlanRecords,
+  clearExpiredSyncPlanRecords, FileFolderHistoryRecord,
 } from "./localdb";
 import { RemoteClient } from "./remote";
 import {
@@ -47,7 +47,7 @@ import {
 import { DEFAULT_S3_CONFIG } from "./remoteForS3";
 import { DEFAULT_WEBDAV_CONFIG } from "./remoteForWebdav";
 import { RemotelySaveSettingTab } from "./settings";
-import { fetchMetadataFile, parseRemoteItems, SyncStatusType } from "./sync";
+import {fetchMetadataFile, parseRemoteItems, SyncPlanType, SyncStatusType} from "./sync";
 import { doActualSync, getSyncPlan, isPasswordOk } from "./sync";
 import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
 import { ObsConfigDirFileType, listFilesInObsFolder } from "./obsFolderLister";
@@ -142,6 +142,7 @@ export default class RemotelySavePlugin extends Plugin {
         new Notice(prefix + x, timeout);
       }
     };
+
     if (this.syncStatus !== "idle" && triggerSource == "manual") {
       // here the notice is shown regardless of triggerSource
 
@@ -157,22 +158,11 @@ export default class RemotelySavePlugin extends Plugin {
       }
       return;
     }
-
-    let originLabel = `${this.manifest.name}`;
-    if (this.syncRibbon !== undefined) {
-      originLabel = this.syncRibbon.getAttribute("aria-label");
-    }
+    let originLabel = this.getOriginLabel();
 
     try {
       if (this.syncRibbon !== undefined) {
-        setIcon(this.syncRibbon, iconNameSyncRunning);
-        this.syncRibbon.setAttribute(
-          "aria-label",
-          t("syncrun_syncingribbon", {
-            pluginName: this.manifest.name,
-            triggerSource: triggerSource,
-          })
-        );
+        this.setSyncIconRunning(t, triggerSource);
       }
 
       const MAX_STEPS = this.settings.debugEnabled ? 8 : 2;
@@ -203,15 +193,7 @@ export default class RemotelySavePlugin extends Plugin {
       );
       this.syncStatus = "getting_remote_files_list";
       const self = this;
-      const client = new RemoteClient(
-        this.settings.serviceType,
-        this.settings.s3,
-        this.settings.webdav,
-        this.settings.dropbox,
-        this.settings.onedrive,
-        this.app.vault.getName(),
-        () => self.saveSettings()
-      );
+      const client = this.getRemoteClient(self);
       const remoteRsp = await client.listFromRemote();
 
       getNotice(
@@ -235,19 +217,8 @@ export default class RemotelySavePlugin extends Plugin {
         }), 4
       );
       this.syncStatus = "getting_remote_extra_meta";
-      const { remoteStates, metadataFile } = await parseRemoteItems(
-        remoteRsp.Contents,
-        this.db,
-        this.vaultRandomID,
-        client.serviceType,
-        this.settings.password
-      );
-      const origMetadataOnRemote = await fetchMetadataFile(
-        metadataFile,
-        client,
-        this.app.vault,
-        this.settings.password
-      );
+      const { remoteStates, metadataFile } = await this.parseRemoteItems(remoteRsp.Contents, client);
+      const origMetadataOnRemote = await this.fetchMetadataFromRemote(metadataFile, client);
 
       getNotice(
         t("syncrun_step5", {
@@ -256,15 +227,8 @@ export default class RemotelySavePlugin extends Plugin {
       );
       this.syncStatus = "getting_local_meta";
       const local = this.app.vault.getAllLoadedFiles();
-      const localHistory = await loadFileHistoryTableByVault(
-        this.db,
-        this.vaultRandomID
-      );
-      let localConfigDirContents: ObsConfigDirFileType[] = await listFilesInObsFolder(
-          this.app.vault.configDir,
-          this.app.vault,
-          this.manifest.id
-      );
+      const localHistory = await this.getLocalHistory();
+      let localConfigDirContents: ObsConfigDirFileType[] = await this.listFilesInObsFolder();
 
       getNotice(
         t("syncrun_step6", {
@@ -272,21 +236,7 @@ export default class RemotelySavePlugin extends Plugin {
         }), 6
       );
       this.syncStatus = "generating_plan";
-      const { plan, sortedKeys, deletions, sizesGoWrong } = await getSyncPlan(
-        remoteStates,
-        local,
-        localConfigDirContents,
-        origMetadataOnRemote.deletions,
-        localHistory,
-        client.serviceType,
-        triggerSource,
-        this.app.vault,
-        this.settings.syncConfigDir,
-        this.app.vault.configDir,
-        this.settings.syncUnderscoreItems,
-        this.settings.skipSizeLargerThan,
-        this.settings.password
-      );
+      const { plan, sortedKeys, deletions, sizesGoWrong } = await this.getSyncPlan(remoteStates, local, localConfigDirContents, origMetadataOnRemote, localHistory, client, triggerSource);
 
       await insertSyncPlanRecordByVault(this.db, plan, this.vaultRandomID);
 
@@ -301,32 +251,7 @@ export default class RemotelySavePlugin extends Plugin {
         );
 
         this.syncStatus = "syncing";
-        await doActualSync(
-          client,
-          this.db,
-          this.vaultRandomID,
-          this.app.vault,
-          plan,
-          sortedKeys,
-          metadataFile,
-          origMetadataOnRemote,
-          sizesGoWrong,
-          deletions,
-          (key: string) => self.trash(key),
-          this.settings.password,
-          this.settings.concurrency,
-          (ss: FileOrFolderMixedState[]) => {
-            new SizesConflictModal(
-              self.app,
-              self,
-              this.settings.skipSizeLargerThan,
-              ss,
-              this.settings.password !== ""
-            ).open();
-          },
-          (i: number, totalCount: number, pathName: string, decision: string) =>
-            self.setCurrSyncMsg(i, totalCount, pathName, decision)
-        );
+        await this.doActualSync(client, plan, sortedKeys, metadataFile, origMetadataOnRemote, sizesGoWrong, deletions, self);
       } else {
         this.syncStatus = "syncing";
         getNotice(
@@ -344,14 +269,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.syncStatus = "finish";
       this.syncStatus = "idle";
 
-      this.settings.lastSuccessSync = Date.now();
-      this.saveSettings();
-      this.updateLastSuccessSyncMsg(this.settings.lastSuccessSync);
-
-      if (this.syncRibbon !== undefined) {
-        setIcon(this.syncRibbon, iconNameSyncWait);
-        this.syncRibbon.setAttribute("aria-label", originLabel);
-      }
+      this.updateLastSyncTime();
     } catch (error) {
       const msg = t("syncrun_abort", {
         manifestID: this.manifest.id,
@@ -375,6 +293,131 @@ export default class RemotelySavePlugin extends Plugin {
         this.syncRibbon.setAttribute("aria-label", originLabel);
       }
     }
+  }
+
+  private getOriginLabel() {
+    let originLabel = `${this.manifest.name}`;
+    if (this.syncRibbon !== undefined) {
+      originLabel = this.syncRibbon.getAttribute("aria-label");
+    }
+    return originLabel;
+  }
+
+  private updateLastSyncTime() {
+    this.settings.lastSuccessSync = Date.now();
+    this.saveSettings();
+
+    this.updateLastSuccessSyncMsg(this.settings.lastSuccessSync);
+
+    if (this.syncRibbon !== undefined) {
+      setIcon(this.syncRibbon, iconNameSyncWait);
+      this.syncRibbon.setAttribute("aria-label", this.getOriginLabel());
+    }
+  }
+
+  private async doActualSync(client: RemoteClient, plan: SyncPlanType, sortedKeys: string[], metadataFile: FileOrFolderMixedState, origMetadataOnRemote: MetadataOnRemote, sizesGoWrong: FileOrFolderMixedState[], deletions: DeletionOnRemote[], self: this) {
+    await doActualSync(
+      client,
+      this.db,
+      this.vaultRandomID,
+      this.app.vault,
+      plan,
+      sortedKeys,
+      metadataFile,
+      origMetadataOnRemote,
+      sizesGoWrong,
+      deletions,
+      (key: string) => self.trash(key),
+      this.settings.password,
+      this.settings.concurrency,
+      (ss: FileOrFolderMixedState[]) => {
+        new SizesConflictModal(
+          self.app,
+          self,
+          this.settings.skipSizeLargerThan,
+          ss,
+          this.settings.password !== ""
+        ).open();
+      },
+      (i: number, totalCount: number, pathName: string, decision: string) =>
+        self.setCurrSyncMsg(i, totalCount, pathName, decision)
+    );
+  }
+
+  private async getSyncPlan(remoteStates: FileOrFolderMixedState[], local: TAbstractFile[], localConfigDirContents: ObsConfigDirFileType[], origMetadataOnRemote: MetadataOnRemote, localHistory: FileFolderHistoryRecord[], client: RemoteClient, triggerSource: "manual" | "auto" | "autoOnceInit" | "dry") {
+    return await getSyncPlan(
+      remoteStates,
+      local,
+      localConfigDirContents,
+      origMetadataOnRemote.deletions,
+      localHistory,
+      client.serviceType,
+      triggerSource,
+      this.app.vault,
+      this.settings.syncConfigDir,
+      this.app.vault.configDir,
+      this.settings.syncUnderscoreItems,
+      this.settings.skipSizeLargerThan,
+      this.settings.password
+    );
+  }
+
+  private async listFilesInObsFolder() {
+    return await listFilesInObsFolder(
+      this.app.vault.configDir,
+      this.app.vault,
+      this.manifest.id
+    );
+  }
+
+  private async getLocalHistory() {
+    return await loadFileHistoryTableByVault(
+      this.db,
+      this.vaultRandomID
+    );
+  }
+
+  private async fetchMetadataFromRemote(metadataFile: FileOrFolderMixedState, client: RemoteClient) {
+    return await fetchMetadataFile(
+      metadataFile,
+      client,
+      this.app.vault,
+      this.settings.password
+    );
+  }
+
+  private async parseRemoteItems(contents: RemoteItem[], client: RemoteClient) {
+    return await parseRemoteItems(
+      contents,
+      this.db,
+      this.vaultRandomID,
+      client.serviceType,
+      this.settings.password
+    );
+  }
+
+  private getRemoteClient(self: this) {
+    const client = new RemoteClient(
+      this.settings.serviceType,
+      this.settings.s3,
+      this.settings.webdav,
+      this.settings.dropbox,
+      this.settings.onedrive,
+      this.app.vault.getName(),
+      () => self.saveSettings()
+    );
+    return client;
+  }
+
+  private setSyncIconRunning(t: (x: TransItemType, vars?: any) => string, triggerSource: "manual" | "auto" | "dry" | "autoOnceInit") {
+    setIcon(this.syncRibbon, iconNameSyncRunning);
+    this.syncRibbon.setAttribute(
+      "aria-label",
+      t("syncrun_syncingribbon", {
+        pluginName: this.manifest.name,
+        triggerSource: triggerSource,
+      })
+    );
   }
 
   async onload() {
