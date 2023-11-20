@@ -4,6 +4,8 @@
 
 If you like it or find it useful, please consider give it a [star ![GitHub Repo stars](https://img.shields.io/github/stars/sboesen/remotely-secure?style=social)](https://github.com/sboesen/remotely-secure) on Github.
 
+Pull requests greatly appreciated! Please see [Contributing](#contributing) to get started.
+
 ## Disclaimer
 
 - **This is NOT the [official sync service](https://obsidian.md/sync) provided by Obsidian.**
