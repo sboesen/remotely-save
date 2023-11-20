@@ -74,6 +74,31 @@ You are greatly welcome to ask questions, post any suggestions, or report any bu
 - Option #2: You can also use [Obsidian42 - BRAT](https://github.com/TfTHacker/obsidian42-brat) to install this plugin. Input `sboesen/remotely-secure` in the configuration of BRAT.
 - Option #3: [![GitHub release (latest by SemVer and asset including pre-releases)](https://img.shields.io/github/downloads-pre/sboesen/remotely-secure/latest/main.js?sort=semver)](https://github.com/sboesen/remotely-secure/releases) Manually download assets (`main.js`, `manifest.json`, `styles.css`) from the latest release.
 
+## Contributing
+
+Building the project:
+```
+git clone https://github.com/sboesen/remotely-secure
+cd remotely-secure
+npm install
+```
+
+Running development build (watches for changes and recompiles)
+```
+npm run dev2
+```
+
+Building a production build
+```
+npm run build2
+```
+
+Testing:
+```
+cp main.js styles.css manifest.json /your/path/to/vault/.obsidian/plugins/remotely-secure
+```
+Open development tools and Cmd+r or Ctrl+r to refresh the Obsidian app, quickly reloading the plugin.
+
 ## Usage
 
 ### S3
