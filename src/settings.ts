@@ -1568,7 +1568,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .setDesc(t("settings_autorun_desc"))
       .addDropdown((dropdown) => {
         dropdown.addOption("-1", t("settings_autorun_notset"));
-        dropdown.addOption(`${1000 * 60 * 1}`, t("settings_autorun_1min"));
+        dropdown.addOption(`${1000 * 5}`, t("settings_autorun_second", { "time": 5 }));
+        dropdown.addOption(`${1000 * 15}`, t("settings_autorun_second", { "time": 15 }));
+        dropdown.addOption(`${1000 * 30}`, t("settings_autorun_second", { "time": 30 }));
+        dropdown.addOption(`${1000 * 60}`, t("settings_autorun_1min"));
         dropdown.addOption(`${1000 * 60 * 5}`, t("settings_autorun_5min"));
         dropdown.addOption(`${1000 * 60 * 10}`, t("settings_autorun_10min"));
         dropdown.addOption(`${1000 * 60 * 30}`, t("settings_autorun_30min"));
