@@ -164,7 +164,7 @@ export default class RemotelySavePlugin extends Plugin {
       log.debug(this.manifest.name, " already running in stage: ", this.syncStatus);
 
       if (this.currSyncMsg !== undefined && this.currSyncMsg !== "") {
-        log.debug(this.currSyncMsg); 
+        log.debug(this.currSyncMsg);
       }
       return;
     }
@@ -304,6 +304,19 @@ export default class RemotelySavePlugin extends Plugin {
       }
     }
   }
+
+  private shouldSyncBasedOnSyncPlan = async (syncPlan: SyncPlanType) => {
+
+    for (const key in syncPlan.mixedStates) {
+      const fileState = syncPlan.mixedStates[key];
+
+      if (fileState.existLocal && fileState.existRemote && fileState.mtimeLocal! > fileState.mtimeRemote!) {
+        console.log("Should sync!")
+        return true;
+      }
+    }
+    return false;
+  };
 
   private getOriginLabel() {
     let originLabel = `${this.manifest.name}`;
@@ -969,7 +982,20 @@ export default class RemotelySavePlugin extends Plugin {
     ) {
       let runScheduled = false;
       this.app.workspace.onLayoutReady(() => {
-        const intervalID = window.setInterval(() => {
+        const intervalIDVaultScanner = window.setInterval(async () => {
+          console.log("Getting sync plan...")
+          let plan = await this.getSyncPlan2();
+          console.log("Got sync plan.")
+          if (await this.shouldSyncBasedOnSyncPlan(plan)) {
+            // perform sync
+            this.doActualSync()
+
+          }
+        }, 10_000);
+        const intervalIDSyncOnSave = window.setInterval(async () => {
+
+
+
           const currentFile = this.app.workspace.getActiveFile();
 
           if (currentFile) {
@@ -984,19 +1010,43 @@ export default class RemotelySavePlugin extends Plugin {
                 log.debug(`schedule a run for ${scheduleTimeFromNow} milliseconds later`)
                 runScheduled = true
                 setTimeout(() => {
-                  this.syncRun("auto")
-                  runScheduled = false
-                },
+                    this.syncRun("auto")
+                    runScheduled = false
+                  },
                   scheduleTimeFromNow
                 )
               }
             }
           }
         }, 1_000);
-        this.syncOnSaveIntervalID = intervalID;
-        this.registerInterval(intervalID);
+        this.syncOnSaveIntervalID = intervalIDSyncOnSave;
+        this.registerInterval(intervalIDSyncOnSave);
+        this.syncOnSaveIntervalID = intervalIDVaultScanner;
+        this.registerInterval(intervalIDVaultScanner);
       });
     }
+  }
+
+  private async getSyncPlan2() {
+    const client = this.getRemoteClient(this);
+    const remoteRsp = await client.listFromRemote();
+
+    const passwordCheckResult = await isPasswordOk(
+      remoteRsp.Contents,
+      this.settings.password
+    );
+    const {remoteStates, metadataFile} = await this.parseRemoteItems(remoteRsp.Contents, client);
+
+    const local = this.app.vault.getAllLoadedFiles();
+    const localHistory = await this.getLocalHistory();
+    let localConfigDirContents: ObsConfigDirFileType[] = await this.listFilesInObsFolder();
+    const origMetadataOnRemote = await this.fetchMetadataFromRemote(metadataFile, client);
+
+
+    const {
+      plan
+    } = await this.getSyncPlan(remoteStates, local, localConfigDirContents, origMetadataOnRemote, localHistory, client, "auto");
+    return plan;
   }
 
   enableAutoSyncIfSet() {
