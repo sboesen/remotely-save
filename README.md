@@ -64,7 +64,7 @@ The easiest way to migrate from Remotely Save (or other forks) to Remotely Secur
 
 ## Questions, Suggestions, Or Bugs
 
-You are greatly welcome to ask questions, post any suggestions, or report any bugs! The project is mainly maintained on GitHub:
+You are greatly welcome to ask questions, post any suggestions, or report any bugs! Pull requests also greatly appreciated. The project is mainly maintained on GitHub:
 
 - Questions: [GitHub repo Discussions](https://github.com/sboesen/remotely-secure/discussions)
 - Suggestions: also in [GitHub repo Discussions](https://github.com/sboesen/remotely-secure/discussions)
