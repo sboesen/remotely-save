@@ -26,8 +26,8 @@ Pull requests greatly appreciated! Please see [Contributing](#contributing) to g
   - Amazon S3 or S3-compatible
   - Dropbox
   - OneDrive for personal
-  - Webdav (**Currently untested, please file a bug report if this isn't working**)
-  - [Here](./docs/services_connectable_or_not.md) shows more connectable (or not-connectable) services in details. Please note this list came from the original [Remotely Save](https://github.com/remotely-save/remotely-save) plugin and may not be up to date for Remotely Secure.
+  - Webdav
+  - [Here](./docs/services_connectable_or_not.md) shows more connectable (or not-connectable) services in details. Need another service added? Please [open a feature request](#questions-suggestions-or-bugs)!
 - **Obsidian Mobile supported.** Vaults can be synced across mobile and desktop devices with the cloud service as the "broker".
 - **[End-to-end encryption](./docs/encryption.md) supported.** Files would be encrypted using openssl format before being sent to the cloud **if** user specify a password.
 - **Scheduled auto sync supported.** You can also manually trigger the sync using sidebar ribbon, or using the command from the command palette (or even bind the hot key combination to the command then press the hot key combination).
