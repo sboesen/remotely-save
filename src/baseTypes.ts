@@ -8,12 +8,11 @@ import type { LangType, LangTypeAndAuto } from "./i18n";
 
 export const DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
-export type SUPPORTED_SERVICES_TYPE = "s3" | "webdav" | "dropbox" | "onedrive";
+export type SUPPORTED_SERVICES_TYPE = "s3" | "webdav" | "dropbox" ;
 
 export type SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR =
   | "webdav"
-  | "dropbox"
-  | "onedrive";
+  | "dropbox";
 
 export interface S3Config {
   s3Endpoint: string;
@@ -56,24 +55,10 @@ export interface WebdavConfig {
   remoteBaseDir?: string;
 }
 
-export interface OnedriveConfig {
-  accessToken: string;
-  clientID: string;
-  authority: string;
-  refreshToken: string;
-  accessTokenExpiresInSeconds: number;
-  accessTokenExpiresAtTime: number;
-  deltaLink: string;
-  username: string;
-  credentialsShouldBeDeletedAtTime?: number;
-  remoteBaseDir?: string;
-}
-
 export interface RemotelySavePluginSettings {
   s3: S3Config;
   webdav: WebdavConfig;
   dropbox: DropboxConfig;
-  onedrive: OnedriveConfig;
   password: string;
   serviceType: SUPPORTED_SERVICES_TYPE;
   debugEnabled?: boolean;

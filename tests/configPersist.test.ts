@@ -17,9 +17,6 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   dropbox: {
     username: "测试中文",
   } as any,
-  onedrive: {
-    username: "test 🍎 emoji",
-  } as any,
   password: "password",
   serviceType: "s3",
   enableStatusBarInfo: true

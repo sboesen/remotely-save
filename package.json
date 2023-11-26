@@ -1,6 +1,6 @@
 {
   "name": "remotely-save",
-  "version": "0.4.19",
+  "version": "0.4.20",
   "description": "Security fixes for the remotely-save unofficial plugin allowing users to synchronize notes between local device and the cloud service. Not backwards compatible.",
   "scripts": {
     "dev2": "node esbuild.config.mjs",
@@ -23,7 +23,6 @@
   "author": "",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@microsoft/microsoft-graph-types": "^2.19.0",
     "@types/chai": "^4.3.1",
     "@types/chai-as-promised": "^7.1.5",
     "@types/jsdom": "^16.2.14",
@@ -60,7 +59,6 @@
     "@aws-sdk/types": "^3.78.0",
     "@azure/msal-node": "^2.5.1",
     "@fyears/tsqueue": "^1.0.1",
-    "@microsoft/microsoft-graph-client": "^3.0.2",
     "acorn": "^8.7.1",
     "aggregate-error": "^4.0.0",
     "assert": "^2.0.0",

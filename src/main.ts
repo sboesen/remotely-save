@@ -38,12 +38,6 @@ import {
   sendAuthReq as sendAuthReqDropbox,
   setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceDropbox,
 } from "./remoteForDropbox";
-import {
-  AccessCodeResponseSuccessfulType,
-  DEFAULT_ONEDRIVE_CONFIG,
-  sendAuthReq as sendAuthReqOnedrive,
-  setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceOnedrive,
-} from "./remoteForOnedrive";
 import { DEFAULT_S3_CONFIG } from "./remoteForS3";
 import { DEFAULT_WEBDAV_CONFIG } from "./remoteForWebdav";
 import { RemotelySaveSettingTab } from "./settings";
@@ -70,7 +64,6 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
   webdav: DEFAULT_WEBDAV_CONFIG,
   dropbox: DEFAULT_DROPBOX_CONFIG,
-  onedrive: DEFAULT_ONEDRIVE_CONFIG,
   password: "",
   serviceType: "s3",
   debugEnabled: false,
@@ -402,7 +395,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.s3,
       this.settings.webdav,
       this.settings.dropbox,
-      this.settings.onedrive,
+      undefined,
       this.app.vault.getName(),
       () => self.saveSettings()
     );
@@ -609,84 +602,6 @@ export default class RemotelySavePlugin extends Plugin {
       }
     );
 
-    this.registerObsidianProtocolHandler(
-      COMMAND_CALLBACK_ONEDRIVE,
-      async (inputParams) => {
-        if (inputParams.code !== undefined) {
-          if (this.oauth2Info.helperModal !== undefined) {
-            this.oauth2Info.helperModal.contentEl.empty();
-
-            t("protocol_onedrive_connecting")
-              .split("\n")
-              .forEach((val) => {
-                this.oauth2Info.helperModal.contentEl.createEl("p", {
-                  text: val,
-                });
-              });
-          }
-
-          let rsp = await sendAuthReqOnedrive(
-            this.settings.onedrive.clientID,
-            this.settings.onedrive.authority,
-            inputParams.code,
-            this.oauth2Info.verifier
-          );
-
-          if ((rsp as any).error !== undefined) {
-            throw Error(`${JSON.stringify(rsp)}`);
-          }
-
-          const self = this;
-          setConfigBySuccessfullAuthInplaceOnedrive(
-            this.settings.onedrive,
-            rsp as AccessCodeResponseSuccessfulType,
-            () => self.saveSettings()
-          );
-
-          const client = new RemoteClient(
-            "onedrive",
-            undefined,
-            undefined,
-            undefined,
-            this.settings.onedrive,
-            this.app.vault.getName(),
-            () => self.saveSettings()
-          );
-          this.settings.onedrive.username = await client.getUser();
-          await this.saveSettings();
-
-          this.oauth2Info.verifier = ""; // reset it
-          this.oauth2Info.helperModal?.close(); // close it
-          this.oauth2Info.helperModal = undefined;
-
-          this.oauth2Info.authDiv?.toggleClass(
-            "onedrive-auth-button-hide",
-            this.settings.onedrive.username !== ""
-          );
-          this.oauth2Info.authDiv = undefined;
-
-          this.oauth2Info.revokeAuthSetting?.setDesc(
-            t("protocol_onedrive_connect_succ_revoke", {
-              username: this.settings.onedrive.username,
-            })
-          );
-          this.oauth2Info.revokeAuthSetting = undefined;
-          this.oauth2Info.revokeDiv?.toggleClass(
-            "onedrive-revoke-auth-button-hide",
-            this.settings.onedrive.username === ""
-          );
-          this.oauth2Info.revokeDiv = undefined;
-        } else {
-          new Notice(t("protocol_onedrive_connect_fail"));
-          throw Error(
-            t("protocol_onedrive_connect_unknown", {
-              params: JSON.stringify(inputParams),
-            })
-          );
-        }
-      }
-    );
-
     this.syncRibbon = this.addRibbonIcon(
       iconNameSyncWait,
       `${this.manifest.name}`,
@@ -803,15 +718,6 @@ export default class RemotelySavePlugin extends Plugin {
     if (this.settings.dropbox.remoteBaseDir === undefined) {
       this.settings.dropbox.remoteBaseDir = "";
     }
-    if (this.settings.onedrive.clientID === "") {
-      this.settings.onedrive.clientID = DEFAULT_SETTINGS.onedrive.clientID;
-    }
-    if (this.settings.onedrive.authority === "") {
-      this.settings.onedrive.authority = DEFAULT_SETTINGS.onedrive.authority;
-    }
-    if (this.settings.onedrive.remoteBaseDir === undefined) {
-      this.settings.onedrive.remoteBaseDir = "";
-    }
     if (this.settings.webdav.manualRecursive === undefined) {
       this.settings.webdav.manualRecursive = false;
     }
@@ -856,14 +762,6 @@ export default class RemotelySavePlugin extends Plugin {
         current + 1000 * 60 * 60 * 24 * 30;
       needSave = true;
     }
-    if (
-      this.settings.onedrive.refreshToken !== "" &&
-      this.settings.onedrive.credentialsShouldBeDeletedAtTime === undefined
-    ) {
-      this.settings.onedrive.credentialsShouldBeDeletedAtTime =
-        current + 1000 * 60 * 60 * 24 * 30;
-      needSave = true;
-    }
 
     // check expired or not
     let dropboxExpired = false;
@@ -876,35 +774,15 @@ export default class RemotelySavePlugin extends Plugin {
       needSave = true;
     }
 
-    let onedriveExpired = false;
-    if (
-      this.settings.onedrive.refreshToken !== "" &&
-      current >= this.settings.onedrive.credentialsShouldBeDeletedAtTime
-    ) {
-      onedriveExpired = true;
-      this.settings.onedrive = cloneDeep(DEFAULT_ONEDRIVE_CONFIG);
-      needSave = true;
-    }
-
     // save back
     if (needSave) {
       await this.saveSettings();
     }
 
     // send notice
-    if (dropboxExpired && onedriveExpired) {
-      new Notice(
-        `${this.manifest.name}: You haven't manually auth Dropbox and OneDrive for a while, you need to re-auth them again.`,
-        6000
-      );
-    } else if (dropboxExpired) {
+    if (dropboxExpired) {
       new Notice(
         `${this.manifest.name}: You haven't manually auth Dropbox for a while, you need to re-auth it again.`,
-        6000
-      );
-    } else if (onedriveExpired) {
-      new Notice(
-        `${this.manifest.name}: You haven't manually auth OneDrive for a while, you need to re-auth it again.`,
         6000
       );
     }

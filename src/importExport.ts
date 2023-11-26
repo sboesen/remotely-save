@@ -16,7 +16,6 @@ export const exportQrCodeUri = async (
 ) => {
   const settings2 = cloneDeep(settings);
   delete settings2.dropbox;
-  delete settings2.onedrive;
   delete settings2.vaultRandomID;
   const data = encodeURIComponent(JSON.stringify(settings2));
   const vault = encodeURIComponent(currentVaultName);

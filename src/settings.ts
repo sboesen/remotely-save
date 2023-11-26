@@ -39,10 +39,6 @@ import {
   sendAuthReq as sendAuthReqDropbox,
   setConfigBySuccessfullAuthInplace,
 } from "./remoteForDropbox";
-import {
-  DEFAULT_ONEDRIVE_CONFIG,
-  getAuthUrlAndVerifier as getAuthUrlAndVerifierOnedrive,
-} from "./remoteForOnedrive";
 import { messyConfigToNormal } from "./configPersist";
 import type { TransItemType } from "./i18n";
 import { checkHasSpecialCharForDir } from "./misc";
@@ -373,141 +369,6 @@ class DropboxAuthModal extends Modal {
           });
         });
     }
-  }
-
-  onClose() {
-    let { contentEl } = this;
-    contentEl.empty();
-  }
-}
-
-export class OnedriveAuthModal extends Modal {
-  readonly plugin: RemotelySavePlugin;
-  readonly authDiv: HTMLDivElement;
-  readonly revokeAuthDiv: HTMLDivElement;
-  readonly revokeAuthSetting: Setting;
-  constructor(
-    app: App,
-    plugin: RemotelySavePlugin,
-    authDiv: HTMLDivElement,
-    revokeAuthDiv: HTMLDivElement,
-    revokeAuthSetting: Setting
-  ) {
-    super(app);
-    this.plugin = plugin;
-    this.authDiv = authDiv;
-    this.revokeAuthDiv = revokeAuthDiv;
-    this.revokeAuthSetting = revokeAuthSetting;
-  }
-
-  async onOpen() {
-    let { contentEl } = this;
-
-    const { authUrl, verifier } = await getAuthUrlAndVerifierOnedrive(
-      this.plugin.settings.onedrive.clientID,
-      this.plugin.settings.onedrive.authority
-    );
-    this.plugin.oauth2Info.verifier = verifier;
-
-    const t = (x: TransItemType, vars?: any) => {
-      return this.plugin.i18n.t(x, vars);
-    };
-
-    t("modal_onedriveauth_shortdesc")
-      .split("\n")
-      .forEach((val) => {
-        contentEl.createEl("p", {
-          text: val,
-        });
-      });
-    const div2 = contentEl.createDiv();
-    div2.createEl(
-      "button",
-      {
-        text: t("modal_onedriveauth_copybutton"),
-      },
-      (el) => {
-        el.onclick = async () => {
-          await navigator.clipboard.writeText(authUrl);
-          new Notice(t("modal_onedriveauth_copynotice"));
-        };
-      }
-    );
-
-    contentEl.createEl("p").createEl("a", {
-      href: authUrl,
-      text: authUrl,
-    });
-  }
-
-  onClose() {
-    let { contentEl } = this;
-    contentEl.empty();
-  }
-}
-
-export class OnedriveRevokeAuthModal extends Modal {
-  readonly plugin: RemotelySavePlugin;
-  readonly authDiv: HTMLDivElement;
-  readonly revokeAuthDiv: HTMLDivElement;
-  constructor(
-    app: App,
-    plugin: RemotelySavePlugin,
-    authDiv: HTMLDivElement,
-    revokeAuthDiv: HTMLDivElement
-  ) {
-    super(app);
-    this.plugin = plugin;
-    this.authDiv = authDiv;
-    this.revokeAuthDiv = revokeAuthDiv;
-  }
-
-  async onOpen() {
-    let { contentEl } = this;
-    const t = (x: TransItemType, vars?: any) => {
-      return this.plugin.i18n.t(x, vars);
-    };
-
-    contentEl.createEl("p", {
-      text: t("modal_onedriverevokeauth_step1"),
-    });
-    const consentUrl = "https://microsoft.com/consent";
-    contentEl.createEl("p").createEl("a", {
-      href: consentUrl,
-      text: consentUrl,
-    });
-
-    contentEl.createEl("p", {
-      text: t("modal_onedriverevokeauth_step2"),
-    });
-
-    new Setting(contentEl)
-      .setName(t("modal_onedriverevokeauth_clean"))
-      .setDesc(t("modal_onedriverevokeauth_clean_desc"))
-      .addButton(async (button) => {
-        button.setButtonText(t("modal_onedriverevokeauth_clean_button"));
-        button.onClick(async () => {
-          try {
-            this.plugin.settings.onedrive = JSON.parse(
-              JSON.stringify(DEFAULT_ONEDRIVE_CONFIG)
-            );
-            await this.plugin.saveSettings();
-            this.authDiv.toggleClass(
-              "onedrive-auth-button-hide",
-              this.plugin.settings.onedrive.username !== ""
-            );
-            this.revokeAuthDiv.toggleClass(
-              "onedrive-revoke-auth-button-hide",
-              this.plugin.settings.onedrive.username === ""
-            );
-            new Notice(t("modal_onedriverevokeauth_clean_notice"));
-            this.close();
-          } catch (err) {
-            console.error(err);
-            new Notice(t("modal_onedriverevokeauth_clean_fail"));
-          }
-        });
-      });
   }
 
   onClose() {
@@ -1068,155 +929,6 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     //////////////////////////////////////////////////
-    // below for onedrive
-    //////////////////////////////////////////////////
-
-    const onedriveDiv = containerEl.createEl("div", { cls: "onedrive-hide" });
-    onedriveDiv.toggleClass(
-      "onedrive-hide",
-      this.plugin.settings.serviceType !== "onedrive"
-    );
-    onedriveDiv.createEl("h2", { text: t("settings_onedrive") });
-    const onedriveLongDescDiv = onedriveDiv.createEl("div", {
-      cls: "settings-long-desc",
-    });
-    for (const c of [
-      t("settings_onedrive_disclaimer1"),
-      t("settings_onedrive_disclaimer2"),
-    ]) {
-      onedriveLongDescDiv.createEl("p", {
-        text: c,
-        cls: "onedrive-disclaimer",
-      });
-    }
-
-    onedriveLongDescDiv.createEl("p", {
-      text: t("settings_onedrive_folder", {
-        pluginID: this.plugin.manifest.id,
-        remoteBaseDir:
-          this.plugin.settings.onedrive.remoteBaseDir ||
-          this.app.vault.getName(),
-      }),
-    });
-
-    onedriveLongDescDiv.createEl("p", {
-      text: t("settings_onedrive_nobiz"),
-    });
-
-    const onedriveSelectAuthDiv = onedriveDiv.createDiv();
-    const onedriveAuthDiv = onedriveSelectAuthDiv.createDiv({
-      cls: "onedrive-auth-button-hide settings-auth-related",
-    });
-    const onedriveRevokeAuthDiv = onedriveSelectAuthDiv.createDiv({
-      cls: "onedrive-revoke-auth-button-hide settings-auth-related",
-    });
-
-    const onedriveRevokeAuthSetting = new Setting(onedriveRevokeAuthDiv)
-      .setName(t("settings_onedrive_revoke"))
-      .setDesc(
-        t("settings_onedrive_revoke_desc", {
-          username: this.plugin.settings.onedrive.username,
-        })
-      )
-      .addButton(async (button) => {
-        button.setButtonText(t("settings_onedrive_revoke_button"));
-        button.onClick(async () => {
-          new OnedriveRevokeAuthModal(
-            this.app,
-            this.plugin,
-            onedriveAuthDiv,
-            onedriveRevokeAuthDiv
-          ).open();
-        });
-      });
-
-    new Setting(onedriveAuthDiv)
-      .setName(t("settings_onedrive_auth"))
-      .setDesc(t("settings_onedrive_auth_desc"))
-      .addButton(async (button) => {
-        button.setButtonText(t("settings_onedrive_auth_button"));
-        button.onClick(async () => {
-          const modal = new OnedriveAuthModal(
-            this.app,
-            this.plugin,
-            onedriveAuthDiv,
-            onedriveRevokeAuthDiv,
-            onedriveRevokeAuthSetting
-          );
-          this.plugin.oauth2Info.helperModal = modal;
-          this.plugin.oauth2Info.authDiv = onedriveAuthDiv;
-          this.plugin.oauth2Info.revokeDiv = onedriveRevokeAuthDiv;
-          this.plugin.oauth2Info.revokeAuthSetting = onedriveRevokeAuthSetting;
-          modal.open();
-        });
-      });
-
-    onedriveAuthDiv.toggleClass(
-      "onedrive-auth-button-hide",
-      this.plugin.settings.onedrive.username !== ""
-    );
-    onedriveRevokeAuthDiv.toggleClass(
-      "onedrive-revoke-auth-button-hide",
-      this.plugin.settings.onedrive.username === ""
-    );
-
-    let newOnedriveRemoteBaseDir =
-      this.plugin.settings.onedrive.remoteBaseDir || "";
-    new Setting(onedriveDiv)
-      .setName(t("settings_remotebasedir"))
-      .setDesc(t("settings_remotebasedir_desc"))
-      .addText((text) =>
-        text
-          .setPlaceholder(this.app.vault.getName())
-          .setValue(newOnedriveRemoteBaseDir)
-          .onChange((value) => {
-            newOnedriveRemoteBaseDir = value.trim();
-          })
-      )
-      .addButton((button) => {
-        button.setButtonText(t("confirm"));
-        button.onClick(() => {
-          new ChangeRemoteBaseDirModal(
-            this.app,
-            this.plugin,
-            newOnedriveRemoteBaseDir,
-            "onedrive"
-          ).open();
-        });
-      });
-
-    new Setting(onedriveDiv)
-      .setName(t("settings_checkonnectivity"))
-      .setDesc(t("settings_checkonnectivity_desc"))
-      .addButton(async (button) => {
-        button.setButtonText(t("settings_checkonnectivity_button"));
-        button.onClick(async () => {
-          new Notice(t("settings_checkonnectivity_checking"));
-          const self = this;
-          const client = new RemoteClient(
-            "onedrive",
-            undefined,
-            undefined,
-            undefined,
-            this.plugin.settings.onedrive,
-            this.app.vault.getName(),
-            () => self.plugin.saveSettings()
-          );
-
-          const errors = { msg: "" };
-          const res = await client.checkConnectivity((err: any) => {
-            errors.msg = `${err}`;
-          });
-          if (res) {
-            new Notice(t("settings_onedrive_connect_succ"));
-          } else {
-            new Notice(t("settings_onedrive_connect_fail"));
-            new Notice(errors.msg);
-          }
-        });
-      });
-
-    //////////////////////////////////////////////////
     // below for webdav
     //////////////////////////////////////////////////
 
@@ -1454,7 +1166,6 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown.addOption("s3", t("settings_chooseservice_s3"));
         dropdown.addOption("dropbox", t("settings_chooseservice_dropbox"));
         dropdown.addOption("webdav", t("settings_chooseservice_webdav"));
-        dropdown.addOption("onedrive", t("settings_chooseservice_onedrive"));
         dropdown
           .setValue(this.plugin.settings.serviceType)
           .onChange(async (val: SUPPORTED_SERVICES_TYPE) => {
@@ -1466,10 +1177,6 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             dropboxDiv.toggleClass(
               "dropbox-hide",
               this.plugin.settings.serviceType !== "dropbox"
-            );
-            onedriveDiv.toggleClass(
-              "onedrive-hide",
-              this.plugin.settings.serviceType !== "onedrive"
             );
             webdavDiv.toggleClass(
               "webdav-hide",
