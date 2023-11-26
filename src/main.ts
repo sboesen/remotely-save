@@ -973,7 +973,7 @@ export default class RemotelySavePlugin extends Plugin {
             if (currentTime - lastModified < this.settings.syncOnSaveAfterMilliseconds) {
               if (!runScheduled) {
                 const scheduleTimeFromNow = this.settings.syncOnSaveAfterMilliseconds - (currentTime - lastModified)
-                log.info(`schedule a run for ${scheduleTimeFromNow} milliseconds later`)
+                log.debug(`schedule a run for ${scheduleTimeFromNow} milliseconds later`)
                 runScheduled = true
                 setTimeout(() => {
                   this.syncRun("auto")
