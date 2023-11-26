@@ -14,6 +14,9 @@ export const DEFAULT_FILE_NAME_FOR_METADATAONREMOTE =
 export const DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2 =
   "_remotely-secure-metadata-on-remote.bin";
 
+export const FILE_NAME_FOR_DATA_JSON =
+  "data.json";
+
 export const FILE_NAME_FOR_BOOKMARK_FILE =
   "/bookmarks.json";
 

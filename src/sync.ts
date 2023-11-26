@@ -45,7 +45,7 @@ import {
   DEFAULT_FILE_NAME_FOR_METADATAONREMOTE,
   DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2,
   FILE_NAME_FOR_BOOKMARK_FILE,
-  isEqualMetadataOnRemote,
+  isEqualMetadataOnRemote, FILE_NAME_FOR_DATA_JSON,
 } from "./metadataOnRemote";
 import { isInsideObsFolder, ObsConfigDirFileType } from "./obsFolderLister";
 
@@ -231,8 +231,14 @@ const isSkipItem = (
   configDir: string
 ) => {
   if (syncConfigDir && isInsideObsFolder(key, configDir)) {
+    // Special exception for Remotely Secure's data.json file - always skip.
+    // No point to sync our plugin settings, causes endless syncing because we persist last sync time
+    if (key == configDir + '/plugins/remotely-secure/' + FILE_NAME_FOR_DATA_JSON) {
+      return true;
+    }
     return false;
   }
+
   const shouldSkip = (
     isHiddenPath(key, true, false) ||
     (!syncUnderscoreItems && isHiddenPath(key, false, true)) ||
@@ -1268,6 +1274,33 @@ const splitThreeSteps = (syncPlan: SyncPlanType, sortedKeys: string[]) => {
   };
 };
 
+// Items worth reporting status for don't include skipped items or keepRemoteDelHist (one upload operation for all)
+function isCountableSyncItem(item: FileOrFolderMixedState) {
+  return item.decision != "keepRemoteDelHist" && !item.decision.contains("skip");
+}
+
+async function syncIndividualItem(key: string, val: FileOrFolderMixedState, callbackSyncProcess: any, realCounter: number, actualSyncItems: FileOrFolderMixedState[], vaultRandomID: string, client: RemoteClient, db: InternalDBs, vault: Vault, localDeleteFunc: any, password: string) {
+  log.debug(`start syncing "${key}" with plan ${JSON.stringify(val)}`);
+
+  if (callbackSyncProcess !== undefined && isCountableSyncItem(val)) {
+    await callbackSyncProcess(realCounter, actualSyncItems.length, key, val.decision);
+    realCounter += 1;
+  }
+
+  await dispatchOperationToActual(
+    key,
+    vaultRandomID,
+    val,
+    client,
+    db,
+    vault,
+    localDeleteFunc,
+    password
+  );
+  log.debug(`finished ${key}`);
+  return realCounter;
+}
+
 export const doActualSync = async (
   client: RemoteClient,
   db: InternalDBs,
@@ -1286,7 +1319,12 @@ export const doActualSync = async (
   callbackSyncProcess?: any
 ) => {
   const mixedStates = syncPlan.mixedStates;
-  const totalCount = sortedKeys.length || 0;
+  const actualSyncItems = Object.values(mixedStates).filter(
+    (item) =>
+      isCountableSyncItem(item)
+  );
+  const totalCount = actualSyncItems.length || 0;
+  log.debug("actualSyncItems: ", actualSyncItems)
 
   if (sizesGoWrong.length > 0) {
     log.debug(`some sizes are larger than the threshold, abort and show hints`);
@@ -1305,6 +1343,9 @@ export const doActualSync = async (
   log.debug(`finish syncing extra data firstly`);
 
   log.debug(`concurrency === ${concurrency}`);
+
+  let realCounter = 1;
+
   if (concurrency === 1) {
     // run everything in sequence
     // good old way
@@ -1312,23 +1353,7 @@ export const doActualSync = async (
       const key = sortedKeys[i];
       const val = mixedStates[key];
 
-      log.debug(`start syncing "${key}" with plan ${JSON.stringify(val)}`);
-
-      if (callbackSyncProcess !== undefined) {
-        await callbackSyncProcess(i, totalCount, key, val.decision);
-      }
-
-      await dispatchOperationToActual(
-        key,
-        vaultRandomID,
-        val,
-        client,
-        db,
-        vault,
-        localDeleteFunc,
-        password
-      );
-      log.debug(`finished ${key}`);
+      realCounter = await syncIndividualItem(key, val, callbackSyncProcess, realCounter, actualSyncItems, vaultRandomID, client, db, vault, localDeleteFunc, password);
     }
 
     return; // shortcut return, avoid too many nests below
@@ -1346,8 +1371,6 @@ export const doActualSync = async (
   log.debug("folderCreationOps: ", folderCreationOps.length,
   " deletionOps: ", deletionOps.length,
   " uploadDownloads: ", uploadDownloads.length);
-
-  let realCounter = 1;
 
   for (let i = 0; i < nested.length; ++i) {
     log.debug(logTexts[i]);
@@ -1371,31 +1394,7 @@ export const doActualSync = async (
         const key = val.key;
 
         const fn = async () => {
-          log.debug(`start syncing "${key}" with plan ${JSON.stringify(val)}`);
-
-          if (callbackSyncProcess !== undefined) {
-            await callbackSyncProcess(
-              realCounter,
-              realTotalCount,
-              key,
-              val.decision
-            );
-
-            realCounter += 1;
-          }
-
-          await dispatchOperationToActual(
-            key,
-            vaultRandomID,
-            val,
-            client,
-            db,
-            vault,
-            localDeleteFunc,
-            password
-          );
-
-          log.debug(`finished ${key}`);
+          realCounter = await syncIndividualItem(key, val, callbackSyncProcess, realCounter, actualSyncItems, vaultRandomID, client, db, vault, localDeleteFunc, password);
         };
 
         queue.add(fn).catch((e) => {
