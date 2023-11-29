@@ -29,7 +29,7 @@ Pull requests greatly appreciated! Please see [Contributing](#contributing) to g
   - Webdav
   - [Here](./docs/services_connectable_or_not.md) shows more connectable (or not-connectable) services in details. Need another service added? Please [open a feature request](#questions-suggestions-or-bugs)!
 - **Obsidian Mobile supported.** Vaults can be synced across mobile and desktop devices with the cloud service as the "broker".
-- **[End-to-end encryption](./docs/encryption.md) supported.** Files would be encrypted using openssl format before being sent to the cloud **if** user specify a password.
+- **[End-to-end encryption](./docs/encryption.md) supported.** Files are encrypted using AES-256 GCM before being sent to the cloud **if** user specifies a password.
 - **Scheduled auto sync supported.** You can also manually trigger the sync using sidebar ribbon, or using the command from the command palette (or even bind the hot key combination to the command then press the hot key combination).
 - Sync on Save
 - Sync status bar
@@ -154,7 +154,7 @@ Open development tools and Cmd+r or Ctrl+r to refresh the Obsidian app, quickly 
 
 **By default, all files or folder starting with `.` (dot) or `_` (underscore) are treated as hidden files, and would NOT be synced.** It's useful if you have some files just staying locally. But this strategy also means that themes / other plugins / settings of this plugin would neither be synced.
 
-In the latest version, you can change the settings to allow syncing `_` files or folders, as well as `.obsidian` special config folder (but not any other `.` files or folders).
+You can change the settings to allow syncing `_` files or folders, as well as `.obsidian` special config folder (but not any other `.` files or folders).
 
 ## How To Debug
 
