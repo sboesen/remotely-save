@@ -113,8 +113,11 @@ export default class RemotelySavePlugin extends Plugin {
   syncOnSaveIntervalID?: number;
   i18n: I18n;
   vaultRandomID: string;
+  isManual: boolean;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
+    this.isManual = triggerSource == "manual";
+
     const t = (x: TransItemType, vars?: any) => {
       return this.i18n.t(x, vars);
     };
@@ -122,7 +125,7 @@ export default class RemotelySavePlugin extends Plugin {
     const getNotice = (x: string, step: number, timeout?: number) => {
       // only show notices in manual mode
       // no notice in auto mode
-      if (triggerSource === "manual" || triggerSource === "dry") {
+      if (this.isManual || triggerSource === "manual" || triggerSource === "dry") {
         if (!this.settings.debugEnabled) {
           // If not mobile and status bar enabled, return.
           if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
@@ -152,6 +155,11 @@ export default class RemotelySavePlugin extends Plugin {
           syncStatus: this.syncStatus,
         })
       );
+
+      // If already running, report finished status as user tried to manually sync
+      this.isManual = true;
+
+      log.debug(this.manifest.name, " already running in stage: ", this.syncStatus);
 
       if (this.currSyncMsg !== undefined && this.currSyncMsg !== "") {
         log.debug(this.currSyncMsg); 
