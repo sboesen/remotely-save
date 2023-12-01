@@ -89,6 +89,7 @@ export interface RemotelySavePluginSettings {
   skipSizeLargerThan?: number;
   enableStatusBarInfo: boolean;
   lastSuccessSync?: number;
+  trashLocal: boolean;
 
   /**
    * @deprecated

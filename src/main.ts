@@ -86,7 +86,8 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   logToDB: false,
   skipSizeLargerThan: -1,
   enableStatusBarInfo: true,
-  lastSuccessSync: -1
+  lastSuccessSync: -1,
+  trashLocal: false
 };
 
 interface OAuth2Info {
@@ -934,8 +935,14 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   async trash(x: string) {
-    if (!(await this.app.vault.adapter.trashSystem(x))) {
+    if (this.settings.trashLocal) {
       await this.app.vault.adapter.trashLocal(x);
+      return;
+    } else {
+      // Attempt using system trash, if it fails fallback to trashing into .trash folder
+      if (!(await this.app.vault.adapter.trashSystem(x))) {
+        await this.app.vault.adapter.trashLocal(x);
+      }
     }
   }
 
