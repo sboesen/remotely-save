@@ -1,8 +1,8 @@
-# Remotely Secure
+# Remotely Sync
 
-**Remotely Secure** is a fork of *Remotely Save*, the unofficial sync plugin for Obsidian. The original *Remotely Save* plugin is not actively maintained and has security issues; please see the [list of security updates](#security-updates-from-remotely-save) made to *Remotely Save*. Note this plugin is not backwards compatible with Remotely Save, save your data locally and have a backup before using this plugin. See [migration guide](#migrating-from-remotely-save) instructions.
+**Remotely Sync** is a fork of *Remotely Save*, the unofficial sync plugin for Obsidian. The original *Remotely Save* plugin is not actively maintained and has security issues; please see the [list of security updates](#security-updates-from-remotely-save) made to *Remotely Save*. Note this plugin is not backwards compatible with Remotely Save, save your data locally and have a backup before using this plugin. See [migration guide](#migrating-from-remotely-save) instructions.
 
-If you like it or find it useful, please consider give it a [star ![GitHub Repo stars](https://img.shields.io/github/stars/sboesen/remotely-secure?style=social)](https://github.com/sboesen/remotely-secure) on Github.
+If you like it or find it useful, please consider give it a [star ![GitHub Repo stars](https://img.shields.io/github/stars/sboesen/remotely-sync?style=social)](https://github.com/sboesen/remotely-sync) on Github.
 
 Pull requests greatly appreciated! Please see [Contributing](#contributing) to get started.
 
@@ -16,9 +16,9 @@ Pull requests greatly appreciated! Please see [Contributing](#contributing) to g
 
 
 ## Security Updates from Remotely Save
- - Fixed [encryption bug](https://github.com/sboesen/remotely-secure/commit/d9ad76e774b0b1cee2b36316058df926f4bfb2bf) resulting in AES-CBC usage using the same IV for all files, which can enable attacks that leak key material.
-- Updated encryption to use [AES-GCM](https://github.com/sboesen/remotely-secure/commit/d9ad76e774b0b1cee2b36316058df926f4bfb2bf#diff-6ce8b79e4237671498e2b10caa08b379beaae2cd5e56415167b563d1536f6b74R57) which is more secure and authenticates the ciphertext before decrypting, making it harder to exploit certain padding oracle attacks.
-- Updated [salt](https://github.com/sboesen/remotely-secure/commit/d9ad76e774b0b1cee2b36316058df926f4bfb2bf#diff-6ce8b79e4237671498e2b10caa08b379beaae2cd5e56415167b563d1536f6b74R45) to random bytes every time. [See note](https://github.com/sboesen/remotely-secure/issues/9)
+ - Fixed [encryption bug](https://github.com/sboesen/remotely-sync/commit/d9ad76e774b0b1cee2b36316058df926f4bfb2bf) resulting in AES-CBC usage using the same IV for all files, which can enable attacks that leak key material.
+- Updated encryption to use [AES-GCM](https://github.com/sboesen/remotely-sync/commit/d9ad76e774b0b1cee2b36316058df926f4bfb2bf#diff-6ce8b79e4237671498e2b10caa08b379beaae2cd5e56415167b563d1536f6b74R57) which is more secure and authenticates the ciphertext before decrypting, making it harder to exploit certain padding oracle attacks.
+- Updated [salt](https://github.com/sboesen/remotely-sync/commit/d9ad76e774b0b1cee2b36316058df926f4bfb2bf#diff-6ce8b79e4237671498e2b10caa08b379beaae2cd5e56415167b563d1536f6b74R45) to random bytes every time. [See note](https://github.com/sboesen/remotely-sync/issues/9)
 - **No security guarantees**, but these are the issues I identified when reviewing the end-to-end encryption as implemented in remotely-save.
 
 ## Features
@@ -49,13 +49,13 @@ Pull requests greatly appreciated! Please see [Contributing](#contributing) to g
   - It's usually **NOT** a good idea to check the file into version control. By default, the plugin tries to create a `.gitignore` file inside the plugin directory if it doesn't exist, for ignoring `data.json` in the `git` version control. If you know exactly what it means and want to remove the setting, please modify the `.gitignore` file or set it to be empty.
 
 ## Migrating from Remotely Save
-The easiest way to migrate from Remotely Save (or other forks) to Remotely Secure is:
+The easiest way to migrate from Remotely Save (or other forks) to Remotely Sync is:
 
 1. Make a local, unencrypted backup of your files (make sure to synchronize all changes across your devices)
 2. Disable the remotely-save plugin
-3. Enable remotely-secure and set a new encryption password
+3. Enable remotely-sync and set a new encryption password
 4. Delete the encrypted files in your cloud provider (or make a new S3 bucket in this case)
-5. Perform a sync using remotely-secure
+5. Perform a sync using remotely-sync
 
 ## Credit
 * Thanks to @fyears for the original Remotely Save plugin
@@ -67,22 +67,22 @@ The easiest way to migrate from Remotely Save (or other forks) to Remotely Secur
 
 You are greatly welcome to ask questions, post any suggestions, or report any bugs! Pull requests also greatly appreciated. The project is mainly maintained on GitHub:
 
-- Questions: [GitHub repo Discussions](https://github.com/sboesen/remotely-secure/discussions)
-- Suggestions: also in [GitHub repo Discussions](https://github.com/sboesen/remotely-secure/discussions)
-- Bugs: [GitHub repo Issues](https://github.com/sboesen/remotely-secure/issues) (NOT Discussion)
+- Questions: [GitHub repo Discussions](https://github.com/sboesen/remotely-sync/discussions)
+- Suggestions: also in [GitHub repo Discussions](https://github.com/sboesen/remotely-sync/discussions)
+- Bugs: [GitHub repo Issues](https://github.com/sboesen/remotely-sync/issues) (NOT Discussion)
 
 ## Download and Install
 
-- Option #1: Search in the official "community plugin list", or visit this: [https://obsidian.md/plugins?id=remotely-secure](https://obsidian.md/plugins?id=remotely-secure) (which should redirect you into Obsidian app), then install the plugin.
-- Option #2: You can also use [Obsidian42 - BRAT](https://github.com/TfTHacker/obsidian42-brat) to install this plugin. Input `sboesen/remotely-secure` in the configuration of BRAT.
-- Option #3: [![GitHub release (latest by SemVer and asset including pre-releases)](https://img.shields.io/github/downloads-pre/sboesen/remotely-secure/latest/main.js?sort=semver)](https://github.com/sboesen/remotely-secure/releases) Manually download assets (`main.js`, `manifest.json`, `styles.css`) from the latest release.
+- Option #1: Search in the official "community plugin list", or visit this: [https://obsidian.md/plugins?id=remotely-sync](https://obsidian.md/plugins?id=remotely-secure) (which should redirect you into Obsidian app), then install the plugin.
+- Option #2: You can also use [Obsidian42 - BRAT](https://github.com/TfTHacker/obsidian42-brat) to install this plugin. Input `sboesen/remotely-sync` in the configuration of BRAT.
+- Option #3: [![GitHub release (latest by SemVer and asset including pre-releases)](https://img.shields.io/github/downloads-pre/sboesen/remotely-sync/latest/main.js?sort=semver)](https://github.com/sboesen/remotely-secure/releases) Manually download assets (`main.js`, `manifest.json`, `styles.css`) from the latest release.
 
 ## Contributing
 
 Building the project:
 ```
-git clone https://github.com/sboesen/remotely-secure
-cd remotely-secure
+git clone https://github.com/sboesen/remotely-sync
+cd remotely-sync
 npm install
 ```
 
@@ -98,7 +98,7 @@ npm run build2
 
 Testing:
 ```
-cp main.js styles.css manifest.json /your/path/to/vault/.obsidian/plugins/remotely-secure
+cp main.js styles.css manifest.json /your/path/to/vault/.obsidian/plugins/remotely-sync
 ```
 Open development tools and Cmd+r or Ctrl+r to refresh the Obsidian app, quickly reloading the plugin.
 
@@ -119,7 +119,7 @@ Open development tools and Cmd+r or Ctrl+r to refresh the Obsidian app, quickly 
 ### Dropbox
 
 - **This plugin is NOT an official Dropbox product.** The plugin just uses Dropbox's public API.
-- After the authorization, the plugin can read your name and email (which cannot be unselected on Dropbox api), and read and write files in your Dropbox's `/Apps/remotely-secure` folder.
+- After the authorization, the plugin can read your name and email (which cannot be unselected on Dropbox api), and read and write files in your Dropbox's `/Apps/remotely-sync` folder.
 - If you decide to authorize this plugin to connect to Dropbox, please go to plugin's settings, and choose Dropbox then follow the instructions. [More with screenshot is here](./docs/dropbox_review_material/README.md).
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
 
@@ -127,7 +127,7 @@ Open development tools and Cmd+r or Ctrl+r to refresh the Obsidian app, quickly 
 
 - **This plugin is NOT an official Microsoft / OneDrive product.** The plugin just uses Microsoft's [OneDrive's public API](https://docs.microsoft.com/en-us/onedrive/developer/rest-api).
 - This plugin only works for "OneDrive for personal", and not works for "OneDrive for Business" (yet). See [#11](https://github.com/fyears/remotely-save/issues/11) to further details.
-- After the authorization, the plugin can read your name and email, and read and write files in your OneDrive's `/Apps/remotely-secure` folder.
+- After the authorization, the plugin can read your name and email, and read and write files in your OneDrive's `/Apps/remotely-sync` folder.
 - If you decide to authorize this plugin to connect to OneDrive, please go to plugin's settings, and choose OneDrive then follow the instructions.
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
 

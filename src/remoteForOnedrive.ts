@@ -234,10 +234,10 @@ const fromDriveItemToRemoteItem = (
   // possible prefix:
   // pure english: /drive/root:/Apps/remotely-secure/${remoteBaseDir}
   // or localized, e.g.: /drive/root:/应用/remotely-secure/${remoteBaseDir}
-  const FIRST_COMMON_PREFIX_REGEX = /^\/drive\/root:\/[^\/]+\/Remotely Secure\//g;
+  const FIRST_COMMON_PREFIX_REGEX = /^\/drive\/root:\/[^\/]+\/Remotely Sync\//g;
   // or the root is absolute path /Livefolders,
   // e.g.: /Livefolders/应用/remotely-secure/${remoteBaseDir}
-  const SECOND_COMMON_PREFIX_REGEX = /^\/Livefolders\/[^\/]+\/Remotely Secure\//g;
+  const SECOND_COMMON_PREFIX_REGEX = /^\/Livefolders\/[^\/]+\/Remotely Sync\//g;
 
   // another possibile prefix
   const THIRD_COMMON_PREFIX_RAW = `/drive/items/`;

@@ -231,7 +231,7 @@ const isSkipItem = (
   configDir: string
 ) => {
   if (syncConfigDir && isInsideObsFolder(key, configDir)) {
-    // Special exception for Remotely Secure's data.json file - always skip.
+    // Special exception for Remotely Sync's data.json file - always skip.
     // No point to sync our plugin settings, causes endless syncing because we persist last sync time
     if (key == configDir + '/plugins/remotely-secure/' + FILE_NAME_FOR_DATA_JSON) {
       return true;

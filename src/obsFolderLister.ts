@@ -60,11 +60,16 @@ export const isInsideObsFolder = (x: string, configDir: string) => {
 };
 
 export const listFilesInObsFolder = async (
-  configDir: string,
   vault: Vault,
-  pluginId: string
+  pluginId: string,
+  syncTrash: boolean
 ) => {
-  const q = new Queue([configDir]);
+  let searchFolders = [vault.configDir]
+  if (syncTrash) {
+    // This causes it to fail because .trash may not exist. How can we create the folder if it doesn't exist?
+    searchFolders.push(vault.getRoot().path + ".trash/");
+  }
+  const q = new Queue(searchFolders);
   const CHUNK_SIZE = 10;
   const contents: ObsConfigDirFileType[] = [];
   while (q.length > 0) {
@@ -75,18 +80,18 @@ export const listFilesInObsFolder = async (
 
     const itemsToFetchChunks = chunk(itemsToFetch, CHUNK_SIZE);
     for (const singleChunk of itemsToFetchChunks) {
-      const r = singleChunk.map(async (x) => {
-        const statRes = await statFix(vault, x);
+      const r = singleChunk.map(async (fsEntry) => {
+        const statRes = await statFix(vault, fsEntry);
 
         const isFolder = statRes.type === "folder";
         let children: ListedFiles = undefined;
         if (isFolder) {
-          children = await vault.adapter.list(x);
+          children = await vault.adapter.list(fsEntry);
         }
 
         return {
           itself: {
-            key: isFolder ? `${x}/` : x,
+            key: isFolder ? `${fsEntry}/` : fsEntry,
             ...statRes,
           } as ObsConfigDirFileType,
           children: children,

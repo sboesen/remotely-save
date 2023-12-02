@@ -87,7 +87,8 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   skipSizeLargerThan: -1,
   enableStatusBarInfo: true,
   lastSuccessSync: -1,
-  trashLocal: false
+  trashLocal: false,
+  syncTrash: false
 };
 
 interface OAuth2Info {
@@ -237,7 +238,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.syncStatus = "getting_local_meta";
       const local = this.app.vault.getAllLoadedFiles();
       const localHistory = await this.getLocalHistory();
-      let localConfigDirContents: ObsConfigDirFileType[] = await this.listFilesInObsFolder();
+      let localConfigDirContents: ObsConfigDirFileType[] = await listFilesInObsFolder(this.app.vault, this.manifest.name, this.settings.syncTrash);
 
       getNotice(
         t("syncrun_step6", {
@@ -368,14 +369,6 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.syncUnderscoreItems,
       this.settings.skipSizeLargerThan,
       this.settings.password
-    );
-  }
-
-  private async listFilesInObsFolder() {
-    return await listFilesInObsFolder(
-      this.app.vault.configDir,
-      this.app.vault,
-      this.manifest.id
     );
   }
 

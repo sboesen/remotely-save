@@ -90,6 +90,7 @@ export interface RemotelySavePluginSettings {
   enableStatusBarInfo: boolean;
   lastSuccessSync?: number;
   trashLocal: boolean;
+  syncTrash: boolean;
 
   /**
    * @deprecated
@@ -107,7 +108,7 @@ export interface RemoteItem {
 
 export const COMMAND_URI = "remotely-secure";
 export const COMMAND_CALLBACK = "remotely-secure-cb";
-export const COMMAND_CALLBACK_ONEDRIVE = "remotely-secure-cb-onedrive";
+export const COMMAND_CALLBACK_ONEDRIVE = "remotely-sync-cb-onedrive";
 export const COMMAND_CALLBACK_DROPBOX = "remotely-secure-cb-dropbox";
 
 export interface UriParams {

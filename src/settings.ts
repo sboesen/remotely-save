@@ -1675,6 +1675,18 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
+    new Setting(basicDiv)
+      .setName(t("settings_sync_trash"))
+      .setDesc(t("settings_sync_trash_desc"))
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.syncTrash)
+          .onChange(async (val) => {
+            this.plugin.settings.syncTrash = val;
+            await this.plugin.saveSettings();
+          });
+      });
+
     //////////////////////////////////////////////////
     // below for advanced settings
     //////////////////////////////////////////////////
