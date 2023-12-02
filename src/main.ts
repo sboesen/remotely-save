@@ -65,6 +65,7 @@ import {
   exportVaultSyncPlansToFiles,
 } from "./debugMode";
 import { SizesConflictModal } from "./syncSizesConflictNotice";
+import {mkdirpInVault} from "./misc";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
@@ -116,9 +117,11 @@ export default class RemotelySavePlugin extends Plugin {
   i18n: I18n;
   vaultRandomID: string;
   isManual: boolean;
+  vaultScannerIntervalId?: number;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
     this.isManual = triggerSource == "manual";
+    await this.createTrashIfDoesNotExist();
 
     const t = (x: TransItemType, vars?: any) => {
       return this.i18n.t(x, vars);
@@ -302,6 +305,13 @@ export default class RemotelySavePlugin extends Plugin {
         setIcon(this.syncRibbon, iconNameSyncWait);
         this.syncRibbon.setAttribute("aria-label", originLabel);
       }
+    }
+  }
+
+  private async createTrashIfDoesNotExist() {
+    if (this.settings.syncTrash) {
+      // when syncing to a device which never trashed a file we will error if this folder does not exist
+      await this.createTrashFolderIfDoesNotExist(this.app.vault);
     }
   }
 
@@ -983,21 +993,25 @@ export default class RemotelySavePlugin extends Plugin {
       let runScheduled = false;
       this.app.workspace.onLayoutReady(() => {
         const intervalIDVaultScanner = window.setInterval(async () => {
-          console.log("Getting sync plan...")
           let plan = await this.getSyncPlan2();
-          console.log("Got sync plan.")
           if (await this.shouldSyncBasedOnSyncPlan(plan)) {
-            // perform sync
-            this.doActualSync()
-
+            if (!runScheduled) {
+              log.debug(`schedule a run for ${this.settings.syncOnSaveAfterMilliseconds} milliseconds later`)
+              runScheduled = true
+              setTimeout(() => {
+                  this.syncRun("auto")
+                  runScheduled = false
+                },
+                this.settings.syncOnSaveAfterMilliseconds
+              )
+            }
           }
-        }, 10_000);
+        }, this.settings.syncOnSaveAfterMilliseconds * 10); // More expensive scan, so lookup less frequently
+        this.vaultScannerIntervalId = intervalIDVaultScanner;
+        this.registerInterval(intervalIDVaultScanner);
+
         const intervalIDSyncOnSave = window.setInterval(async () => {
-
-
-
           const currentFile = this.app.workspace.getActiveFile();
-
           if (currentFile) {
             // get the last modified time of the current file
             // if it has been modified within the last syncOnSaveAfterMilliseconds
@@ -1021,13 +1035,13 @@ export default class RemotelySavePlugin extends Plugin {
         }, 1_000);
         this.syncOnSaveIntervalID = intervalIDSyncOnSave;
         this.registerInterval(intervalIDSyncOnSave);
-        this.syncOnSaveIntervalID = intervalIDVaultScanner;
-        this.registerInterval(intervalIDVaultScanner);
       });
     }
   }
 
   private async getSyncPlan2() {
+    // If we don't create trash folder and it's used it will result in an error.
+    await this.createTrashIfDoesNotExist();
     const client = this.getRemoteClient(this);
     const remoteRsp = await client.listFromRemote();
 
@@ -1039,7 +1053,7 @@ export default class RemotelySavePlugin extends Plugin {
 
     const local = this.app.vault.getAllLoadedFiles();
     const localHistory = await this.getLocalHistory();
-    let localConfigDirContents: ObsConfigDirFileType[] = await this.listFilesInObsFolder();
+    let localConfigDirContents: ObsConfigDirFileType[] = await listFilesInObsFolder(this.app.vault, this.manifest.id, this.settings.syncTrash);
     const origMetadataOnRemote = await this.fetchMetadataFromRemote(metadataFile, client);
 
 
@@ -1238,5 +1252,12 @@ export default class RemotelySavePlugin extends Plugin {
       }, autoClearSyncPlanHistAfterMilliseconds);
       this.registerInterval(intervalID);
     });
+  }
+
+  private async createTrashFolderIfDoesNotExist(vault) {
+    let trashStat = await vault.adapter.stat('.trash');
+    if (trashStat == null) {
+      await vault.adapter.mkdir('.trash');
+    }
   }
 }

@@ -65,9 +65,8 @@ export const listFilesInObsFolder = async (
   syncTrash: boolean
 ) => {
   let searchFolders = [vault.configDir]
-  if (syncTrash) {
-    // This causes it to fail because .trash may not exist. How can we create the folder if it doesn't exist?
-    searchFolders.push(vault.getRoot().path + ".trash/");
+  if (syncTrash && await vault.adapter.stat('.trash') != null) {
+    searchFolders.push('.trash');
   }
   const q = new Queue(searchFolders);
   const CHUNK_SIZE = 10;
