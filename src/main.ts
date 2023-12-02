@@ -5,7 +5,7 @@ import {
   Setting,
   setIcon,
   FileSystemAdapter,
-  Platform, TAbstractFile
+  Platform, TAbstractFile, Vault
 } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
 import type {
@@ -1254,7 +1254,7 @@ export default class RemotelySavePlugin extends Plugin {
     });
   }
 
-  private async createTrashFolderIfDoesNotExist(vault) {
+  private async createTrashFolderIfDoesNotExist(vault: Vault) {
     let trashStat = await vault.adapter.stat('.trash');
     if (trashStat == null) {
       await vault.adapter.mkdir('.trash');
