@@ -242,11 +242,16 @@ const fromDriveItemToRemoteItem = (
   // another possibile prefix
   const THIRD_COMMON_PREFIX_RAW = `/drive/items/`;
 
+  // Prefix from before name change
+  const FOURTH_COMMON_PREFIX_REGEX = /^\/drive\/root:\/[^\/]+\/Remotely Secure\//g;
+
   const fullPathOriginal = `${x.parentReference.path}/${x.name}`;
   const matchFirstPrefixRes = fullPathOriginal.match(FIRST_COMMON_PREFIX_REGEX);
   const matchSecondPrefixRes = fullPathOriginal.match(
     SECOND_COMMON_PREFIX_REGEX
   );
+  const matchFourthPrefixRes = fullPathOriginal.match(FOURTH_COMMON_PREFIX_REGEX);
+
   if (
     matchFirstPrefixRes !== null &&
     fullPathOriginal.startsWith(`${matchFirstPrefixRes[0]}${remoteBaseDir}`)
@@ -277,6 +282,9 @@ const fromDriveItemToRemoteItem = (
         )}`
       );
     }
+  } else if (matchFourthPrefixRes !== null && fullPathOriginal.startsWith(`${matchFourthPrefixRes[0]}${remoteBaseDir}`)) {
+    const foundPrefix = `${matchFourthPrefixRes[0]}${remoteBaseDir}`;
+    key = fullPathOriginal.substring(foundPrefix.length + 1);
   } else {
     throw Error(
       `we meet file/folder and do not know how to deal with it:\n${constructFromDriveItemToRemoteItemError(
