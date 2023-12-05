@@ -61,7 +61,7 @@ The easiest way to migrate from Remotely Save (or other forks) to Remotely Sync 
 * Thanks to @fyears for the original Remotely Save plugin
 * Thanks to @sampurkiszb for sync on save
 * Thanks to @zaiziw for Obsidian bookmark sync
-* Thanks to @FEI352 for helping translate the plugin
+* Thanks to @FEI352 & @lyiton for helping translate the plugin
 
 ## Questions, Suggestions, Or Bugs
 
