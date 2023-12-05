@@ -59,6 +59,10 @@ export const isInsideObsFolder = (x: string, configDir: string) => {
   return x === configDir || x.startsWith(`${configDir}/`);
 };
 
+export const isInsideTrashFolder = (path: string) => {
+  return path.startsWith(".trash");
+}
+
 export const listFilesInObsFolder = async (
   vault: Vault,
   pluginId: string,

@@ -388,6 +388,7 @@ export default class RemotelySavePlugin extends Plugin {
       triggerSource,
       this.app.vault,
       this.settings.syncConfigDir,
+      this.settings.syncTrash,
       this.app.vault.configDir,
       this.settings.syncUnderscoreItems,
       this.settings.skipSizeLargerThan,

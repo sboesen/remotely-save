@@ -47,7 +47,7 @@ import {
   FILE_NAME_FOR_BOOKMARK_FILE,
   isEqualMetadataOnRemote, FILE_NAME_FOR_DATA_JSON,
 } from "./metadataOnRemote";
-import { isInsideObsFolder, ObsConfigDirFileType } from "./obsFolderLister";
+import {isInsideObsFolder, isInsideTrashFolder, ObsConfigDirFileType} from "./obsFolderLister";
 
 import { log } from "./moreOnLog";
 
@@ -228,8 +228,8 @@ const isSkipItem = (
   key: string,
   syncConfigDir: boolean,
   syncUnderscoreItems: boolean,
-  configDir: string
-) => {
+  syncTrashDir: boolean
+  , configDir: string) => {
   if (syncConfigDir && isInsideObsFolder(key, configDir)) {
     // Special exception for Remotely Sync's data.json file - always skip.
     // No point to sync our plugin settings, causes endless syncing because we persist last sync time
@@ -237,6 +237,10 @@ const isSkipItem = (
       return true;
     }
     return false;
+  }
+
+  if (syncTrashDir && isInsideTrashFolder(key)) {
+    return true;
   }
 
   const shouldSkip = (
@@ -261,6 +265,7 @@ const ensembleMixedStates = async (
   remoteDeleteHistory: DeletionOnRemote[],
   localFileHistory: FileFolderHistoryRecord[],
   syncConfigDir: boolean,
+  syncTrashDir: boolean,
   configDir: string,
   syncUnderscoreItems: boolean,
   password: string
@@ -270,7 +275,7 @@ const ensembleMixedStates = async (
   for (const r of remoteStates) {
     const key = r.key;
 
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir)) {
+    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, syncTrashDir, configDir)) {
       continue;
     }
     results[key] = r;
@@ -309,7 +314,7 @@ const ensembleMixedStates = async (
       throw Error(`unexpected ${entry}`);
     }
 
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir)) {
+    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, syncTrashDir, configDir)) {
       continue;
     }
 
@@ -369,7 +374,7 @@ const ensembleMixedStates = async (
       deltimeRemoteFmt: unixTimeToStr(entry.actionWhen),
     } as FileOrFolderMixedState;
 
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir)) {
+    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, syncTrashDir, configDir)) {
       continue;
     }
 
@@ -397,7 +402,7 @@ const ensembleMixedStates = async (
       throw Error(`unexpected ${entry}`);
     }
 
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir)) {
+    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, syncTrashDir, configDir)) {
       continue;
     }
 
@@ -916,6 +921,7 @@ export const getSyncPlan = async (
   triggerSource: SyncTriggerSourceType,
   vault: Vault,
   syncConfigDir: boolean,
+  syncTrashDir: boolean,
   configDir: string,
   syncUnderscoreItems: boolean,
   skipSizeLargerThan: number,
@@ -928,6 +934,7 @@ export const getSyncPlan = async (
     remoteDeleteHistory,
     localFileHistory,
     syncConfigDir,
+    syncTrashDir,
     configDir,
     syncUnderscoreItems,
     password
