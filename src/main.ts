@@ -1006,7 +1006,7 @@ export default class RemotelySavePlugin extends Plugin {
               )
             }
           }
-        }, this.settings.syncOnSaveAfterMilliseconds * 10); // More expensive scan, so lookup less frequently
+        }, this.settings.syncOnSaveAfterMilliseconds * 100); // More expensive scan, so lookup less frequently
         this.vaultScannerIntervalId = intervalIDVaultScanner;
         this.registerInterval(intervalIDVaultScanner);
 
