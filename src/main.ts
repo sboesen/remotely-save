@@ -121,6 +121,7 @@ export default class RemotelySavePlugin extends Plugin {
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
     this.isManual = triggerSource == "manual";
+    const MAX_STEPS = this.settings.debugEnabled ? 8 : 2;
     await this.createTrashIfDoesNotExist();
 
     const t = (x: TransItemType, vars?: any) => {
@@ -155,7 +156,8 @@ export default class RemotelySavePlugin extends Plugin {
       // here the notice is shown regardless of triggerSource
 
       new Notice(
-        t("syncrun_alreadyrunning", {
+        "1/" + t("syncrun_alreadyrunning", {
+          maxSteps: `${MAX_STEPS}`,
           pluginName: this.manifest.name,
           syncStatus: this.syncStatus,
         })
@@ -177,8 +179,6 @@ export default class RemotelySavePlugin extends Plugin {
       if (this.syncRibbon !== undefined) {
         this.setSyncIconRunning(t, triggerSource);
       }
-
-      const MAX_STEPS = this.settings.debugEnabled ? 8 : 2;
 
       // Step count will be wrong for dry mode, but that's fine. It already was off by 1
       if (triggerSource === "dry") {
@@ -321,7 +321,6 @@ export default class RemotelySavePlugin extends Plugin {
       const fileState = syncPlan.mixedStates[key];
 
       if (fileState.existLocal && fileState.existRemote && fileState.mtimeLocal! > fileState.mtimeRemote!) {
-        console.log("Should sync!")
         return true;
       }
     }
