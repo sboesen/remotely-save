@@ -371,8 +371,8 @@ export default class RemotelySavePlugin extends Plugin {
           this.settings.password !== ""
         ).open();
       },
-      (i: number, totalCount: number, pathName: string, decision: string) =>
-        self.setCurrSyncMsg(i, totalCount, pathName, decision)
+      (i: number, totalCount: number) =>
+        self.setCurrSyncMsg(i, totalCount)
     );
   }
 
@@ -1100,13 +1100,8 @@ export default class RemotelySavePlugin extends Plugin {
 
   async setCurrSyncMsg(
     i: number,
-    totalCount: number,
-    pathName: string,
-    decision: string
+    totalCount: number
   ) {
-    const msg = `syncing progress=${i}/${totalCount},decision=${decision},path=${pathName}`;
-    log.debug(msg);
-    this.currSyncMsg = msg;
     this.updateStatusBarText(this.i18n.t("syncrun_status_progress", {
       current: i.toString(),
       total: totalCount.toString()

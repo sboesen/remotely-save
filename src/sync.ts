@@ -1286,13 +1286,8 @@ function isCountableSyncItem(item: FileOrFolderMixedState) {
   return item.decision != "keepRemoteDelHist" && !item.decision.contains("skip");
 }
 
-async function syncIndividualItem(key: string, val: FileOrFolderMixedState, callbackSyncProcess: any, realCounter: number, actualSyncItems: FileOrFolderMixedState[], vaultRandomID: string, client: RemoteClient, db: InternalDBs, vault: Vault, localDeleteFunc: any, password: string) {
+async function syncIndividualItem(key: string, val: FileOrFolderMixedState, vaultRandomID: string, client: RemoteClient, db: InternalDBs, vault: Vault, localDeleteFunc: any, password: string) {
   log.debug(`start syncing "${key}" with plan ${JSON.stringify(val)}`);
-
-  if (callbackSyncProcess !== undefined && isCountableSyncItem(val)) {
-    await callbackSyncProcess(realCounter, actualSyncItems.length, key, val.decision);
-    realCounter += 1;
-  }
 
   await dispatchOperationToActual(
     key,
@@ -1305,7 +1300,6 @@ async function syncIndividualItem(key: string, val: FileOrFolderMixedState, call
     password
   );
   log.debug(`finished ${key}`);
-  return realCounter;
 }
 
 export const doActualSync = async (
@@ -1326,12 +1320,6 @@ export const doActualSync = async (
   callbackSyncProcess?: any
 ) => {
   const mixedStates = syncPlan.mixedStates;
-  const actualSyncItems = Object.values(mixedStates).filter(
-    (item) =>
-      isCountableSyncItem(item)
-  );
-  const totalCount = actualSyncItems.length || 0;
-  log.debug("actualSyncItems: ", actualSyncItems)
 
   if (sizesGoWrong.length > 0) {
     log.debug(`some sizes are larger than the threshold, abort and show hints`);
@@ -1350,9 +1338,6 @@ export const doActualSync = async (
   log.debug(`finish syncing extra data firstly`);
 
   log.debug(`concurrency === ${concurrency}`);
-
-  let realCounter = 1;
-
   if (concurrency === 1) {
     // run everything in sequence
     // good old way
@@ -1360,7 +1345,7 @@ export const doActualSync = async (
       const key = sortedKeys[i];
       const val = mixedStates[key];
 
-      realCounter = await syncIndividualItem(key, val, callbackSyncProcess, realCounter, actualSyncItems, vaultRandomID, client, db, vault, localDeleteFunc, password);
+      await syncIndividualItem(key, val, vaultRandomID, client, db, vault, localDeleteFunc, password);
     }
 
     return; // shortcut return, avoid too many nests below
@@ -1401,7 +1386,7 @@ export const doActualSync = async (
         const key = val.key;
 
         const fn = async () => {
-          realCounter = await syncIndividualItem(key, val, callbackSyncProcess, realCounter, actualSyncItems, vaultRandomID, client, db, vault, localDeleteFunc, password);
+          await syncIndividualItem(key, val, vaultRandomID, client, db, vault, localDeleteFunc, password);
         };
 
         queue.add(fn).catch((e) => {
@@ -1415,16 +1400,22 @@ export const doActualSync = async (
         });
       }
 
+      let queueSize = queue.size + queue.pending;
+      queue.on('next', async () => {
+        if (callbackSyncProcess !== undefined) {
+          await callbackSyncProcess(queueSize - queue.pending, queueSize);
+        }
+      });
       await queue.onIdle();
 
-      if (potentialErrors.length > 0) {
-        if (tooManyErrors) {
-          potentialErrors.push(
-            new Error("too many errors, stop the remaining tasks")
-          );
+        if (potentialErrors.length > 0) {
+          if (tooManyErrors) {
+            potentialErrors.push(
+              new Error("too many errors, stop the remaining tasks")
+            );
+          }
+          throw new AggregateError(potentialErrors);
         }
-        throw new AggregateError(potentialErrors);
       }
-    }
   }
 };
