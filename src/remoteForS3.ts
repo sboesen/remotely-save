@@ -35,7 +35,7 @@ import {
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import {
   bufferToArrayBuffer,
-  mkdirpInVault,
+  mkdirpInVault, statFix,
 } from "./misc";
 
 export { S3Client } from "@aws-sdk/client-s3";
@@ -189,9 +189,13 @@ const fromS3HeadObjectToRemoteItem = (
   key: string,
   x: HeadObjectCommandOutput
 ) => {
+  let lastModified = x.LastModified.valueOf();
+  if (x.Metadata['modification_time'] == null) {
+    lastModified = parseInt(x.Metadata['modification_time']);
+  }
   return {
     key: key,
-    lastModified: x.LastModified.valueOf(),
+    lastModified: lastModified,
     size: x.ContentLength,
     remoteType: "s3",
     etag: x.ETag,
@@ -311,6 +315,7 @@ export const uploadToRemote = async (
 
     const bytesIn5MB = 5242880;
     const body = new Uint8Array(remoteContent);
+    const { mtime } = await statFix(vault, fileOrFolderPath);
     const upload = new Upload({
       client: s3Client,
       queueSize: s3Config.partsConcurrency, // concurrency
@@ -321,6 +326,7 @@ export const uploadToRemote = async (
         Key: uploadFile,
         Body: body,
         ContentType: contentType,
+        Metadata: {modification_time: mtime.toString()}
       },
     });
     await upload.done();

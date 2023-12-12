@@ -3,7 +3,7 @@ import { Dropbox, DropboxAuth } from "dropbox";
 import type { files, DropboxResponseError, DropboxResponse } from "dropbox";
 import { Vault, requestUrl, RequestUrlParam } from "obsidian";
 import {
-  dirname
+  dirname, statFix
 } from "./misc";
 import {
   DropboxConfig,
@@ -493,6 +493,17 @@ export const getRemoteMeta = async (
   return fromDropboxItemToRemoteItem(rsp.result, client.remoteBaseDir);
 };
 
+function getMtimeFromDateString(dateString: string) {
+  const date = new Date(dateString);
+  return date.getTime() / 1000;
+}
+
+function getDateStringFromMtime(mtime: number) {
+  const date = new Date(mtime * 1000);
+  const isoString = date.toISOString();
+  return isoString.slice(0, 19) + 'Z'; // strip off milliseconds
+}
+
 export const uploadToRemote = async (
   client: WrappedDropboxClient,
   fileOrFolderPath: string,
@@ -588,6 +599,9 @@ export const uploadToRemote = async (
     // in dropbox, we don't need to create folders before uploading! cool!
     // TODO: filesUploadSession for larger files (>=150 MB)
 
+    const { mtime } = await statFix(vault, fileOrFolderPath);
+    let mtimeString = getDateStringFromMtime(mtime);
+
     await retryReq(
       () =>
         client.dropbox.filesUpload({
@@ -596,6 +610,7 @@ export const uploadToRemote = async (
           mode: {
             ".tag": "overwrite",
           },
+          client_modified: mtimeString
         }),
       fileOrFolderPath
     );
