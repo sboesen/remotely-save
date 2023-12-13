@@ -504,7 +504,7 @@ function getDateStringFromMtime(mtime: number) {
   return isoString.slice(0, 19) + 'Z'; // strip off milliseconds
 }
 
-async function getDropboxMtimeString(vault: Vault, fileOrFolderPath: string) {
+async function getDropboxMtimeString(vault: Vault, fileOrFolderPath: string) : Promise<string> {
   const fileStat = await statFix(vault, fileOrFolderPath);
   if (fileStat) {
     const mtimeString = getDateStringFromMtime(fileStat.mtime);
