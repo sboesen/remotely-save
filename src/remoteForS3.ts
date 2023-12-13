@@ -315,19 +315,25 @@ export const uploadToRemote = async (
 
     const bytesIn5MB = 5242880;
     const body = new Uint8Array(remoteContent);
-    const { mtime } = await statFix(vault, fileOrFolderPath);
+    const fileStat = await statFix(vault, fileOrFolderPath);
+
+    let s3Params = {
+      Bucket: s3Config.s3BucketName,
+      Key: uploadFile,
+      Body: body,
+      ContentType: contentType
+    };
+
+    if (fileStat) {
+      s3Params["Metadata"] = fileStat.mtime;
+    }
+
     const upload = new Upload({
       client: s3Client,
       queueSize: s3Config.partsConcurrency, // concurrency
       partSize: bytesIn5MB, // minimal 5MB by default
       leavePartsOnError: false,
-      params: {
-        Bucket: s3Config.s3BucketName,
-        Key: uploadFile,
-        Body: body,
-        ContentType: contentType,
-        Metadata: {modification_time: mtime.toString()}
-      },
+      params: s3Params
     });
     await upload.done();
 
