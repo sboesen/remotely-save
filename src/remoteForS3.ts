@@ -328,7 +328,8 @@ export const uploadToRemote = async (
         Bucket: s3Config.s3BucketName,
         Key: uploadFile,
         Body: body,
-        ContentType: contentType
+        ContentType: contentType,
+        Metadata: {modification_time: mtime}
       }
     });
     await upload.done();
