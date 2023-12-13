@@ -190,7 +190,7 @@ const fromS3HeadObjectToRemoteItem = (
   x: HeadObjectCommandOutput
 ) => {
   let lastModified = x.LastModified.valueOf();
-  if (x.Metadata['modification_time'] == null) {
+  if (x.Metadata['modification_time'] != null) {
     lastModified = parseInt(x.Metadata['modification_time']);
   }
   return {
