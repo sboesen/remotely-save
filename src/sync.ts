@@ -1018,6 +1018,7 @@ export const getSyncPlan = async (
 
 const uploadExtraMeta = async (
   client: RemoteClient,
+  vault: Vault,
   metadataFile: FileOrFolderMixedState | undefined,
   origMetadata: MetadataOnRemote | undefined,
   deletions: DeletionOnRemote[],
@@ -1055,7 +1056,7 @@ const uploadExtraMeta = async (
 
   await client.uploadToRemote(
     key,
-    undefined,
+    vault,
     false,
     password,
     remoteEncryptedKey,
@@ -1330,6 +1331,7 @@ export const doActualSync = async (
   log.debug(`start syncing extra data firstly`);
   await uploadExtraMeta(
     client,
+    vault,
     metadataFile,
     origMetadata,
     deletions,

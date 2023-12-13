@@ -504,6 +504,14 @@ function getDateStringFromMtime(mtime: number) {
   return isoString.slice(0, 19) + 'Z'; // strip off milliseconds
 }
 
+async function getDropboxMtimeString(vault: Vault, fileOrFolderPath: string) {
+  const fileStat = await statFix(vault, fileOrFolderPath);
+  if (fileStat) {
+    const mtimeString = getDateStringFromMtime(fileStat.mtime);
+  }
+  return undefined;
+}
+
 export const uploadToRemote = async (
   client: WrappedDropboxClient,
   fileOrFolderPath: string,
@@ -598,9 +606,7 @@ export const uploadToRemote = async (
     }
     // in dropbox, we don't need to create folders before uploading! cool!
     // TODO: filesUploadSession for larger files (>=150 MB)
-
-    const { mtime } = await statFix(vault, fileOrFolderPath);
-    let mtimeString = getDateStringFromMtime(mtime);
+    let mtimeString = await getDropboxMtimeString(vault, fileOrFolderPath);
 
     await retryReq(
       () =>
