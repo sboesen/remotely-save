@@ -171,6 +171,7 @@ export const DEFAULT_S3_CONFIG = {
   bypassCorsLocally: true,
   partsConcurrency: 20,
   forcePathStyle: false,
+  disableS3MetadataSync: false
 };
 
 export type S3ObjectType = _Object;
@@ -319,18 +320,23 @@ export const uploadToRemote = async (
 
     let mtime = fileStat == undefined ? undefined : fileStat.mtime.toString();
 
+    let uploadParams : any = {
+      Bucket: s3Config.s3BucketName,
+      Key: uploadFile,
+      Body: body,
+      ContentType: contentType
+    };
+
+    if (!s3Config.disableS3MetadataSync) {
+      uploadParams["Metadata"] = {modification_time: mtime};
+    }
+
     const upload = new Upload({
       client: s3Client,
       queueSize: s3Config.partsConcurrency, // concurrency
       partSize: bytesIn5MB, // minimal 5MB by default
       leavePartsOnError: false,
-      params: {
-        Bucket: s3Config.s3BucketName,
-        Key: uploadFile,
-        Body: body,
-        ContentType: contentType,
-        Metadata: {modification_time: mtime}
-      }
+      params: uploadParams
     });
     await upload.done();
 

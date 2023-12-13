@@ -1955,6 +1955,19 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           new Notice(t("settings_resetcache_notice"));
         });
       });
+
+    new Setting(debugDiv)
+      .setName(t("settings_disable_s3_metadata_sync"))
+      .setDesc(t("settings_disable_s3_metadata_sync_desc"))
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.s3.disableS3MetadataSync)
+          .onChange(async (val) => {
+            this.plugin.settings.s3.disableS3MetadataSync = val;
+            await this.plugin.saveSettings();
+            new Notice(t("settings_enablestatusbar_reloadrequired_notice"));
+          });
+      });
   }
 
   hide() {

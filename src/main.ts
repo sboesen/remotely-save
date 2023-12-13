@@ -89,7 +89,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   enableStatusBarInfo: true,
   lastSuccessSync: -1,
   trashLocal: false,
-  syncTrash: false
+  syncTrash: false,
 };
 
 interface OAuth2Info {
@@ -851,6 +851,9 @@ export default class RemotelySavePlugin extends Plugin {
     }
     if (this.settings.s3.forcePathStyle === undefined) {
       this.settings.s3.forcePathStyle = false;
+    }
+    if (this.settings.s3.disableS3MetadataSync == undefined) {
+      this.settings.s3.disableS3MetadataSync = false;
     }
   }
 

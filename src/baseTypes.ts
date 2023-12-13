@@ -24,6 +24,7 @@ export interface S3Config {
   bypassCorsLocally?: boolean;
   partsConcurrency?: number;
   forcePathStyle?: boolean;
+  disableS3MetadataSync: boolean;
 }
 
 export interface DropboxConfig {
