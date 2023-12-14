@@ -145,6 +145,11 @@ Open development tools and Cmd+r or Ctrl+r to refresh the Obsidian app, quickly 
 - Your data would be synced to a `${vaultName}` sub folder on your webdav server.
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
 
+### Alibaba Cloud OSS
+- Use the S3 configuration
+- Enable "Disable S3 metadata sync" if you get 403 errors. This means not syncing modification time until it is [fixed](https://github.com/sboesen/remotely-sync/issues/70).
+
+
 ## Scheduled Auto Sync
 
 - You can configure auto syncing every N minutes in settings.
