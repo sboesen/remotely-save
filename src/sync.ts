@@ -119,6 +119,24 @@ export const isPasswordOk = async (
   }
 };
 
+export const getMetadataFiles = async(
+  remote: RemoteItem[],
+  password: string = ""
+)=> {
+  let metadataFiles = [];
+  for (const entry of remote) {
+    const remoteEncryptedKey = entry.key;
+    let key = remoteEncryptedKey;
+    if (password !== "") {
+      key = await decryptBase64urlToString(remoteEncryptedKey, password);
+    }
+    if (key == DEFAULT_FILE_NAME_FOR_METADATAONREMOTE) {
+      metadataFiles.push(remoteEncryptedKey);
+    }
+  }
+  return metadataFiles;
+}
+
 export const parseRemoteItems = async (
   remote: RemoteItem[],
   db: InternalDBs,
@@ -1016,7 +1034,7 @@ export const getSyncPlan = async (
   };
 };
 
-const uploadExtraMeta = async (
+export const uploadExtraMeta = async (
   client: RemoteClient,
   vault: Vault,
   metadataFile: FileOrFolderMixedState | undefined,
