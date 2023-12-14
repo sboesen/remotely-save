@@ -81,27 +81,6 @@ export class RemoteClient {
     }
   }
 
-  getRemoteMeta = async (fileOrFolderPath: string) => {
-    if (this.serviceType === "s3") {
-      return await s3.getRemoteMeta(
-        s3.getS3Client(this.s3Config),
-        this.s3Config,
-        fileOrFolderPath
-      );
-    } else if (this.serviceType === "webdav") {
-      return await webdav.getRemoteMeta(this.webdavClient, fileOrFolderPath);
-    } else if (this.serviceType === "dropbox") {
-      return await dropbox.getRemoteMeta(this.dropboxClient, fileOrFolderPath);
-    } else if (this.serviceType === "onedrive") {
-      return await onedrive.getRemoteMeta(
-        this.onedriveClient,
-        fileOrFolderPath
-      );
-    } else {
-      throw Error(`not supported service type ${this.serviceType}`);
-    }
-  };
-
   uploadToRemote = async (
     fileOrFolderPath: string,
     vault: Vault,

@@ -493,11 +493,6 @@ export const getRemoteMeta = async (
   return fromDropboxItemToRemoteItem(rsp.result, client.remoteBaseDir);
 };
 
-function getMtimeFromDateString(dateString: string) {
-  const date = new Date(dateString);
-  return date.getTime() / 1000;
-}
-
 function getDateStringFromMtime(mtime: number) {
   const date = new Date(mtime * 1000);
   const isoString = date.toISOString();
