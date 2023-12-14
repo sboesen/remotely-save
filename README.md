@@ -130,6 +130,7 @@ Open development tools and Cmd+r or Ctrl+r to refresh the Obsidian app, quickly 
 - After the authorization, the plugin can read your name and email, and read and write files in your OneDrive's `/Apps/remotely-sync` folder.
 - If you decide to authorize this plugin to connect to OneDrive, please go to plugin's settings, and choose OneDrive then follow the instructions.
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
+- Syncing empty files is not supported (see [related issue](https://github.com/sboesen/remotely-sync/issues/67))
 
 ### webdav
 
