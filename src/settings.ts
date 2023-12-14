@@ -53,6 +53,8 @@ import {
   log,
   restoreLogWritterInplace,
 } from "./moreOnLog";
+import {encryptStringToBase64url} from "./encrypt";
+import {DEFAULT_FILE_NAME_FOR_METADATAONREMOTE, DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2} from "./metadataOnRemote";
 
 class PasswordModal extends Modal {
   plugin: RemotelySavePlugin;
@@ -1949,7 +1951,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .setName(t("settings_resetcache"))
       .setDesc(t("settings_resetcache_desc"))
       .addButton(async (button) => {
-        button.setButtonText(t("settings_resetcache_button"));
+        button.setButtonText(t("settings_reset_button"));
         button.onClick(async () => {
           await destroyDBs();
           new Notice(t("settings_resetcache_notice"));
@@ -1968,6 +1970,41 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             new Notice(t("settings_enablestatusbar_reloadrequired_notice"));
           });
       });
+    new Setting(debugDiv)
+      .setName(t("settings_reset_sync_metadata"))
+      .setDesc(t("settings_reset_sync_metadata_desc"))
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_reset_button"));
+        button.onClick(async () => {
+          await this.deleteRemoteMetadata();
+          new Notice(t("settings_reset_sync_metadata_notice"));
+        });
+      });
+  }
+
+  private async deleteRemoteMetadata() {
+    let client = this.getClient();
+
+    // TODO I think we only need one of these but for now just delete both
+    let path = DEFAULT_FILE_NAME_FOR_METADATAONREMOTE;
+    let path2 = DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2;
+
+    let remoteEncryptedKey = await encryptStringToBase64url(path, this.plugin.settings.password);
+    let remoteEncryptedKey2 = await encryptStringToBase64url(path, this.plugin.settings.password);
+    await client.deleteFromRemote(path, this.plugin.settings.password, remoteEncryptedKey);
+    await client.deleteFromRemote(path2, this.plugin.settings.password, remoteEncryptedKey2);
+  }
+
+  private getClient() {
+    return new RemoteClient(
+      this.plugin.settings.serviceType,
+      this.plugin.settings.s3,
+      this.plugin.settings.webdav,
+      this.plugin.settings.dropbox,
+      this.plugin.settings.onedrive,
+      this.app.vault.getName(),
+      () => this.plugin.saveSettings()
+    )
   }
 
   hide() {
