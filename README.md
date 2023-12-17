@@ -18,7 +18,7 @@ Pull requests greatly appreciated! Please see [Contributing](#contributing) to g
 
 
 ## Security Updates from Remotely Save
-- Updated encryption to use [AES-GCM](https://github.com/sboesen/remotely-sync/commit/d9ad76e774b0b1cee2b36316058df926f4bfb2bf#diff-6ce8b79e4237671498e2b10caa08b379beaae2cd5e56415167b563d1536f6b74R57) which is more secure and authenticates the ciphertext when decrypting, making it harder to exploit certain padding oracle attacks.
+- Updated encryption to use [AES-GCM](https://github.com/sboesen/remotely-sync/commit/d9ad76e774b0b1cee2b36316058df926f4bfb2bf#diff-6ce8b79e4237671498e2b10caa08b379beaae2cd5e56415167b563d1536f6b74R57) which is more secure and authenticates the ciphertext when decrypting, making it harder to exploit [padding oracle attacks](https://cryptopals.com/sets/3/challenges/17).
 - Updated [salt](https://github.com/sboesen/remotely-sync/commit/d9ad76e774b0b1cee2b36316058df926f4bfb2bf#diff-6ce8b79e4237671498e2b10caa08b379beaae2cd5e56415167b563d1536f6b74R45) from 8 -> 16 bytes. [See note](https://github.com/sboesen/remotely-sync/issues/9)
 - Updated IV to not be derived from the user's password ([discussion](https://github.com/sboesen/remotely-sync/discussions/76#discussioncomment-7878678))
 - **No security guarantees**, but these are the issues I identified when reviewing the end-to-end encryption as implemented in remotely-save.
