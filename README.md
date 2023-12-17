@@ -1,6 +1,8 @@
 # Remotely Sync
 
-**Remotely Sync** is a fork of *Remotely Save*, the unofficial sync plugin for Obsidian. The original *Remotely Save* plugin is not actively maintained and has security issues; please see the [list of security updates](#security-updates-from-remotely-save) made to *Remotely Save*. Note this plugin is not backwards compatible with Remotely Save, save your data locally and have a backup before using this plugin. See [migration guide](#migrating-from-remotely-save) instructions.
+**Remotely Sync** is a fork of *Remotely Save*, the unofficial sync plugin for Obsidian. At the time of forking the *Remotely Save* plugin was not actively maintained and some security improvements were made to Remotely Save - please see the [list of security updates](#security-updates-from-remotely-save) made to *Remotely Save*. Note this plugin is not backwards compatible with Remotely Save, save your data locally and have a backup before using this plugin. See [migration guide](#migrating-from-remotely-save) instructions.
+
+Note that some of the features will be merged into Remotely Save over time, and Remotely Sync is likely less stable at any point in time. If you want stability go with [Remotely Save](https://github.com/remotely-save/remotely-save)!
 
 If you like it or find it useful, please consider give it a [star ![GitHub Repo stars](https://img.shields.io/github/stars/sboesen/remotely-sync?style=social)](https://github.com/sboesen/remotely-sync) on Github.
 
@@ -16,9 +18,9 @@ Pull requests greatly appreciated! Please see [Contributing](#contributing) to g
 
 
 ## Security Updates from Remotely Save
- - Fixed [encryption bug](https://github.com/sboesen/remotely-sync/commit/d9ad76e774b0b1cee2b36316058df926f4bfb2bf) resulting in AES-CBC usage using the same IV for all files, which can enable attacks that leak key material.
-- Updated encryption to use [AES-GCM](https://github.com/sboesen/remotely-sync/commit/d9ad76e774b0b1cee2b36316058df926f4bfb2bf#diff-6ce8b79e4237671498e2b10caa08b379beaae2cd5e56415167b563d1536f6b74R57) which is more secure and authenticates the ciphertext before decrypting, making it harder to exploit certain padding oracle attacks.
-- Updated [salt](https://github.com/sboesen/remotely-sync/commit/d9ad76e774b0b1cee2b36316058df926f4bfb2bf#diff-6ce8b79e4237671498e2b10caa08b379beaae2cd5e56415167b563d1536f6b74R45) to random bytes every time. [See note](https://github.com/sboesen/remotely-sync/issues/9)
+- Updated encryption to use [AES-GCM](https://github.com/sboesen/remotely-sync/commit/d9ad76e774b0b1cee2b36316058df926f4bfb2bf#diff-6ce8b79e4237671498e2b10caa08b379beaae2cd5e56415167b563d1536f6b74R57) which is more secure and authenticates the ciphertext when decrypting, making it harder to exploit certain padding oracle attacks.
+- Updated [salt](https://github.com/sboesen/remotely-sync/commit/d9ad76e774b0b1cee2b36316058df926f4bfb2bf#diff-6ce8b79e4237671498e2b10caa08b379beaae2cd5e56415167b563d1536f6b74R45) from 8 -> 16 bytes. [See note](https://github.com/sboesen/remotely-sync/issues/9)
+- Updated IV to not be derived from the user's password ([discussion](https://github.com/sboesen/remotely-sync/discussions/76#discussioncomment-7878678))
 - **No security guarantees**, but these are the issues I identified when reviewing the end-to-end encryption as implemented in remotely-save.
 
 ## Features
