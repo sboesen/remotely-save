@@ -75,9 +75,9 @@ You are greatly welcome to ask questions, post any suggestions, or report any bu
 
 ## Download and Install
 
-- Option #1: Search in the official "community plugin list", or visit this: [https://obsidian.md/plugins?id=remotely-sync](https://obsidian.md/plugins?id=remotely-secure) (which should redirect you into Obsidian app), then install the plugin.
+- Option #1: Search in the official "community plugin list", or visit this: [https://obsidian.md/plugins?id=remotely-sync](https://obsidian.md/plugins?id=remotely-sync) (which should redirect you into Obsidian app), then install the plugin.
 - Option #2: You can also use [Obsidian42 - BRAT](https://github.com/TfTHacker/obsidian42-brat) to install this plugin. Input `sboesen/remotely-sync` in the configuration of BRAT.
-- Option #3: [![GitHub release (latest by SemVer and asset including pre-releases)](https://img.shields.io/github/downloads-pre/sboesen/remotely-sync/latest/main.js?sort=semver)](https://github.com/sboesen/remotely-secure/releases) Manually download assets (`main.js`, `manifest.json`, `styles.css`) from the latest release.
+- Option #3: [![GitHub release (latest by SemVer and asset including pre-releases)](https://img.shields.io/github/downloads-pre/sboesen/remotely-sync/latest/main.js?sort=semver)](https://github.com/sboesen/remotely-sync/releases) Manually download assets (`main.js`, `manifest.json`, `styles.css`) from the latest release.
 
 ## Contributing
 
