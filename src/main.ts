@@ -404,7 +404,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.vaultRandomID
     );
   }
-
+  
   private async fetchMetadataFromRemote(metadataFile: FileOrFolderMixedState, client: RemoteClient) {
     return await fetchMetadataFile(
       metadataFile,
@@ -733,9 +733,10 @@ export default class RemotelySavePlugin extends Plugin {
       }, 1000 * 30));
     }
 
+    // Register history right leaf view
     this.registerView(
       VIEW_TYPE_HISTORY,
-      (leaf) => new HistoryView(leaf)
+      (leaf) => new HistoryView(leaf, this)
     );
 
     this.addCommand({
