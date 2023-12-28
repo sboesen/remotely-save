@@ -40,6 +40,7 @@ import { RemoteClient } from "./remote";
 import {
   MetadataOnRemote,
   DeletionOnRemote,
+  HistoryOnRemote,
   serializeMetadataOnRemote,
   deserializeMetadataOnRemote,
   DEFAULT_FILE_NAME_FOR_METADATAONREMOTE,
@@ -227,6 +228,7 @@ export const fetchMetadataFile = async (
     log.debug("no metadata file, so no fetch");
     return {
       deletions: [],
+      history: [],
     } as MetadataOnRemote;
   }
 
@@ -1040,6 +1042,7 @@ export const uploadExtraMeta = async (
   metadataFile: FileOrFolderMixedState | undefined,
   origMetadata: MetadataOnRemote | undefined,
   deletions: DeletionOnRemote[],
+  addHistory: boolean,
   password: string = ""
 ) => {
 
@@ -1060,7 +1063,16 @@ export const uploadExtraMeta = async (
 
   const newMetadata: MetadataOnRemote = {
     deletions: deletions,
+    history: []
   };
+
+  if (origMetadata && origMetadata.history.length > 0) {
+    newMetadata.history = origMetadata.history;
+  }
+
+  if (addHistory) {
+    newMetadata.history.push({time: Date.now(), success: true}); // Leave true for now
+  }
 
   // TODO: optimize and/or refactor this. Inefficient until user deletes a file
   if (origMetadata && origMetadata.deletions.length > 0 && isEqualMetadataOnRemote(origMetadata, newMetadata)) {
@@ -1346,6 +1358,7 @@ export const doActualSync = async (
     return;
   }
 
+  // If the metadata is synced first then we can't state if a sync was successful or not. Unless it is uploaded again after?
   log.debug(`start syncing extra data firstly`);
   await uploadExtraMeta(
     client,
@@ -1353,6 +1366,7 @@ export const doActualSync = async (
     metadataFile,
     origMetadata,
     deletions,
+    true,
     password
   );
   log.debug(`finish syncing extra data firstly`);
