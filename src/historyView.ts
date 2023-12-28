@@ -1,10 +1,8 @@
 import { 
-    App,
     ItemView, 
     WorkspaceLeaf 
 } from "obsidian";
 import RemotelySavePlugin from "./main";
-import { MetadataOnRemote } from "./metadataOnRemote";
 
 export const VIEW_TYPE_HISTORY = "history-view";
 
