@@ -92,6 +92,7 @@ export interface RemotelySavePluginSettings {
   lastSuccessSync?: number;
   trashLocal: boolean;
   syncTrash: boolean;
+  syncBookmarks: boolean;
 
   /**
    * @deprecated
