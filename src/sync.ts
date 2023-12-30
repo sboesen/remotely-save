@@ -248,7 +248,8 @@ const isSkipItem = (
   key: string,
   syncConfigDir: boolean,
   syncUnderscoreItems: boolean,
-  syncTrashDir: boolean
+  syncTrashDir: boolean,
+  syncBookmarks: boolean
   , configDir: string) => {
   if (syncConfigDir && isInsideObsFolder(key, configDir)) {
     // Special exception for Remotely Sync's data.json file - always skip.
@@ -286,6 +287,7 @@ const ensembleMixedStates = async (
   localFileHistory: FileFolderHistoryRecord[],
   syncConfigDir: boolean,
   syncTrashDir: boolean,
+  syncBookmarks: boolean,
   configDir: string,
   syncUnderscoreItems: boolean,
   password: string
@@ -295,7 +297,7 @@ const ensembleMixedStates = async (
   for (const r of remoteStates) {
     const key = r.key;
 
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, syncTrashDir, configDir)) {
+    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, syncTrashDir, syncBookmarks, configDir)) {
       continue;
     }
     results[key] = r;
@@ -334,7 +336,7 @@ const ensembleMixedStates = async (
       throw Error(`unexpected ${entry}`);
     }
 
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, syncTrashDir, configDir)) {
+    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, syncTrashDir, syncBookmarks, configDir)) {
       continue;
     }
 
@@ -394,7 +396,7 @@ const ensembleMixedStates = async (
       deltimeRemoteFmt: unixTimeToStr(entry.actionWhen),
     } as FileOrFolderMixedState;
 
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, syncTrashDir, configDir)) {
+    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, syncTrashDir, syncBookmarks, configDir)) {
       continue;
     }
 
@@ -422,7 +424,7 @@ const ensembleMixedStates = async (
       throw Error(`unexpected ${entry}`);
     }
 
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, syncTrashDir, configDir)) {
+    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, syncTrashDir, syncBookmarks, configDir)) {
       continue;
     }
 
@@ -942,6 +944,7 @@ export const getSyncPlan = async (
   vault: Vault,
   syncConfigDir: boolean,
   syncTrashDir: boolean,
+  syncBookmarks: boolean,
   configDir: string,
   syncUnderscoreItems: boolean,
   skipSizeLargerThan: number,
@@ -955,6 +958,7 @@ export const getSyncPlan = async (
     localFileHistory,
     syncConfigDir,
     syncTrashDir,
+    syncBookmarks,
     configDir,
     syncUnderscoreItems,
     password

@@ -24,7 +24,8 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   serviceType: "s3",
   enableStatusBarInfo: true,
   trashLocal: false,
-  syncTrash: false
+  syncTrash: false,
+  syncBookmarks: true
 };
 
 describe("Config Persist tests", () => {
