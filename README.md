@@ -168,6 +168,16 @@ You can change the settings to allow syncing `_` files or folders, as well as `.
 
 See [here](./docs/how_to_debug/README.md) for more details.
 
+## Troubleshooting
+
+### password_not_matched
+If you get a `password_not_matched` error while syncing, try:
+
+1. making a backup of your vault
+2. removing the vault folder on your remote sync service
+3. syncing again.
+
+
 ## Bonus: Import And Export Not-Oauth2 Plugin Settings By QR Code
 
 See [here](./docs/import_export_some_settings.md) for more details.
