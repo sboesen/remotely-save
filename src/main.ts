@@ -734,13 +734,8 @@ export default class RemotelySavePlugin extends Plugin {
       this.registerInterval(window.setInterval(async () => {
         // Check for remote changes every specified time
         const metadataMtime = await this.getMetadataMtime();
-
-        console.log(metadataMtime);
-
       }, 1000 * 3));
     }
-
-    console.log("Test");
 
     if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
       const statusBarItem = this.addStatusBarItem();

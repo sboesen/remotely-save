@@ -501,7 +501,7 @@ function getDateStringFromMtime(mtime: number) {
 
 export async function getDropboxMtimeString(vault: Vault, fileOrFolderPath: string) : Promise<string> {
   const fileStat = await statFix(vault, fileOrFolderPath);
-  console.log(fileStat);
+
   if (fileStat) {
     const mtimeString = getDateStringFromMtime(fileStat.mtime);
   }
@@ -619,7 +619,7 @@ export const uploadToRemote = async (
     // in dropbox, we don't need to create folders before uploading! cool!
     // TODO: filesUploadSession for larger files (>=150 MB)
     let mtimeString = await getDropboxMtimeString(vault, fileOrFolderPath);
-
+    
     await retryReq(
       () =>
         client.dropbox.filesUpload({
