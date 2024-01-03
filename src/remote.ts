@@ -256,9 +256,9 @@ export class RemoteClient {
 
   getMetadataMtime = async (metadataPath: string ) => {
     if (this.serviceType === "dropbox") {
-      const mTimeString = await dropbox.getDropboxMetadataMtime(this.dropboxClient, metadataPath);
+      const mTime = await dropbox.getDropboxMetadataMtime(this.dropboxClient, metadataPath);
       
-      return mTimeString;
+      return mTime;
     }
   };
 

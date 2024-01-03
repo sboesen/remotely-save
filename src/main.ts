@@ -736,8 +736,11 @@ export default class RemotelySavePlugin extends Plugin {
         const metadataMtime = await this.getMetadataMtime();
 
         console.log(metadataMtime);
+
       }, 1000 * 3));
     }
+
+    console.log("Test");
 
     if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
       const statusBarItem = this.addStatusBarItem();

@@ -508,11 +508,20 @@ export async function getDropboxMtimeString(vault: Vault, fileOrFolderPath: stri
   return undefined;
 }
 
-export async function getDropboxMetadataMtime(client: WrappedDropboxClient, metadataPath: string): Promise<string>  {
+export async function getDropboxMetadataMtime(client: WrappedDropboxClient, metadataPath: string): Promise<number> {
   await client.init();
   const key = getDropboxPath(metadataPath, client.remoteBaseDir);
 
-  
+  const rsp = await retryReq(
+    () => client.dropbox.filesDownload({path: key}),
+    metadataPath
+  );
+
+  const mTime = rsp.result.server_modified;
+
+  const date = new Date(mTime);
+
+  return date.getTime();
 }
 
 export const uploadToRemote = async (
