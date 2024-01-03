@@ -48,7 +48,7 @@ import { DEFAULT_S3_CONFIG } from "./remoteForS3";
 import { DEFAULT_WEBDAV_CONFIG } from "./remoteForWebdav";
 import { RemotelySaveSettingTab } from "./settings";
 import {fetchMetadataFile, parseRemoteItems, SyncPlanType, SyncStatusType} from "./sync";
-import { doActualSync, getSyncPlan, isPasswordOk } from "./sync";
+import { doActualSync, getSyncPlan, isPasswordOk, getMetadataPath } from "./sync";
 import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
 import { ObsConfigDirFileType, listFilesInObsFolder } from "./obsFolderLister";
 import { I18n } from "./i18n";
@@ -413,6 +413,16 @@ export default class RemotelySavePlugin extends Plugin {
     );
   }
 
+  private async getMetadataMtime() {
+    const client = this.getRemoteClient(this);
+
+    const remoteRsp = await client.listFromRemote();
+    const {remoteStates, metadataFile} = await this.parseRemoteItems(remoteRsp.Contents, client);
+    const metadataPath = await getMetadataPath(metadataFile, this.settings.password);
+
+    return await client.getMetadataMtime(metadataPath);
+  }
+
   private async parseRemoteItems(contents: RemoteItem[], client: RemoteClient) {
     return await parseRemoteItems(
       contents,
@@ -719,6 +729,15 @@ export default class RemotelySavePlugin extends Plugin {
       `${this.manifest.name}`,
       async () => this.syncRun("manual")
     );
+
+    if (this.settings) { // TODO: Add a setting later
+      this.registerInterval(window.setInterval(async () => {
+        // Check for remote changes every specified time
+        const metadataMtime = await this.getMetadataMtime();
+
+        console.log(metadataMtime);
+      }, 1000 * 3));
+    }
 
     if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
       const statusBarItem = this.addStatusBarItem();
