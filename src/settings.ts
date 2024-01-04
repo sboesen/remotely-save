@@ -1577,23 +1577,17 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       dropdown.addOption(`${1000 * 60}`, t("settings_remoterun_1min"));
       
       dropdown
-        .setValue(`${this.plugin.settings.syncOnRemoteChangeAfterMilliseconds}`)
+        .setValue(`${this.plugin.settings.syncOnRemoteChangesAfterMilliseconds}`)
         .onChange(async (val: string) => {
           const realVal = parseInt(val);
-          this.plugin.settings.syncOnSaveAfterMilliseconds = realVal;
+          this.plugin.settings.syncOnRemoteChangesAfterMilliseconds = realVal;
 
           await this.plugin.saveSettings();
 
-          if ((realVal === undefined || realVal === null || realVal <= 0) && this.plugin.syncOnRemoteChangeIntervalID !== undefined) {
-            window.clearInterval(this.plugin.syncOnRemoteChangeIntervalID);
-            this.plugin.syncOnRemoteChangeIntervalID = undefined;
+          if (realVal <= 0) {
+            this.plugin.toggleSyncOnRemote(false);
           } else {
-            const intervalID = window.setInterval(() => {
-              // behaviour
-            }, realVal);
-
-            this.plugin.syncOnRemoteChangeIntervalID = intervalID;
-            this.plugin.registerInterval(intervalID);
+            this.plugin.toggleSyncOnRemote(true);
           }
         });
     });

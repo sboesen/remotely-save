@@ -79,6 +79,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   autoRunEveryMilliseconds: -1,
   initRunAfterMilliseconds: -1,
   syncOnSaveAfterMilliseconds: -1,
+  syncOnRemoteChangesAfterMilliseconds: -1,
   agreeToUploadExtraMetadata: false,
   concurrency: 5,
   syncConfigDir: false,
@@ -116,7 +117,7 @@ export default class RemotelySavePlugin extends Plugin {
   syncRibbon?: HTMLElement;
   autoRunIntervalID?: number;
   syncOnSaveIntervalID?: number;
-  syncOnRemoteChangeIntervalID?: number;
+  syncOnRemoteIntervalID?: any;
   i18n: I18n;
   vaultRandomID: string;
   isManual: boolean;
@@ -415,16 +416,6 @@ export default class RemotelySavePlugin extends Plugin {
       this.app.vault,
       this.settings.password
     );
-  }
-
-  private async getMetadataMtime() {
-    const client = this.getRemoteClient(this);
-
-    const remoteRsp = await client.listFromRemote();
-    const {remoteStates, metadataFile} = await this.parseRemoteItems(remoteRsp.Contents, client);
-    const metadataPath = await getMetadataPath(metadataFile, this.settings.password);
-
-    return (await client.getMetadataFromRemote(metadataPath)).lastModified;
   }
 
   private async parseRemoteItems(contents: RemoteItem[], client: RemoteClient) {
@@ -734,21 +725,6 @@ export default class RemotelySavePlugin extends Plugin {
       async () => this.syncRun("manual")
     );
 
-    // Check for remote changes
-    if (this.settings) { // TODO: Add a setting later
-      this.registerInterval(window.setInterval(async () => {
-        if (this.syncStatus !== "idle") {
-          return;
-        }
-
-        const metadataMtime = await this.getMetadataMtime();
-
-        if (metadataMtime !== this.lastModified) {
-          this.syncRun("auto");
-        }
-      }, 1000 * 3));
-    }
-
     if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
       const statusBarItem = this.addStatusBarItem();
       this.statusBarElement = statusBarItem.createEl("span");
@@ -836,6 +812,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.enableAutoSyncIfSet();
       this.enableInitSyncIfSet();
       this.enableSyncOnSaveIfSet();
+      this.toggleSyncOnRemote(true);
     }
   }
 
@@ -844,6 +821,10 @@ export default class RemotelySavePlugin extends Plugin {
     if (this.oauth2Info !== undefined) {
       this.oauth2Info.helperModal = undefined;
       this.oauth2Info = undefined;
+    }
+    
+    if (this.syncOnRemoteIntervalID !== undefined) {
+      window.clearInterval(this.syncOnRemoteIntervalID);
     }
   }
 
@@ -1071,6 +1052,39 @@ export default class RemotelySavePlugin extends Plugin {
         this.registerInterval(intervalIDSyncOnSave);
       });
     }
+  }
+
+  toggleSyncOnRemote(enabled: boolean) {
+    if (this.syncOnRemoteIntervalID !== undefined) {
+      window.clearInterval(this.syncOnRemoteIntervalID);
+      this.syncOnRemoteIntervalID = undefined;
+    }
+
+    if (enabled === false || this.settings.syncOnRemoteChangesAfterMilliseconds === -1) {
+      return;
+    }
+
+    this.syncOnRemoteIntervalID = window.setInterval(async () => {
+      if (this.syncStatus !== "idle") {
+        return;
+      }
+
+      const metadataMtime = await this.getMetadataMtime();
+
+      if (metadataMtime !== this.lastModified) {
+        this.syncRun("auto");
+      }
+    }, this.settings.syncOnRemoteChangesAfterMilliseconds);
+  }
+  
+  async getMetadataMtime() {
+    const client = this.getRemoteClient(this);
+
+    const remoteRsp = await client.listFromRemote();
+    const {remoteStates, metadataFile} = await this.parseRemoteItems(remoteRsp.Contents, client);
+    const metadataPath = await getMetadataPath(metadataFile, this.settings.password);
+
+    return (await client.getMetadataFromRemote(metadataPath)).lastModified;
   }
 
   private async getSyncPlan2() {
