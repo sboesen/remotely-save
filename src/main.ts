@@ -109,6 +109,7 @@ export default class RemotelySavePlugin extends Plugin {
   settings: RemotelySavePluginSettings;
   db: InternalDBs;
   syncStatus: SyncStatusType;
+  lastModified: number;
   statusBarElement: HTMLSpanElement;
   oauth2Info: OAuth2Info;
   currSyncMsg?: string;
@@ -283,6 +284,8 @@ export default class RemotelySavePlugin extends Plugin {
       this.syncStatus = "finish";
       this.syncStatus = "idle";
 
+      this.lastModified = await this.getMetadataMtime();
+      
       this.updateLastSyncTime();
     } catch (error) {
       const msg = t("syncrun_abort", {
@@ -730,12 +733,18 @@ export default class RemotelySavePlugin extends Plugin {
       async () => this.syncRun("manual")
     );
 
+    // Check for remote changes
     if (this.settings) { // TODO: Add a setting later
       this.registerInterval(window.setInterval(async () => {
-        // Check for remote changes every specified time
-        const metadataMtime = await this.getMetadataMtime();
-        console.log(metadataMtime);
+        if (this.syncStatus !== "idle") {
+          return;
+        }
 
+        const metadataMtime = await this.getMetadataMtime();
+
+        if (metadataMtime !== this.lastModified) {
+          this.syncRun("auto");
+        }
       }, 1000 * 3));
     }
 
