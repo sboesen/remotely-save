@@ -254,11 +254,15 @@ export class RemoteClient {
     }
   };
 
-  getMetadataMtime = async (metadataPath: string ) => {
+  getMetadataFromRemote = async (fileOrFolderPath: string ) => {
     if (this.serviceType === "dropbox") {
-      const mTime = await dropbox.getDropboxMetadataMtime(this.dropboxClient, metadataPath);
-      
-      return mTime;
+      return await dropbox.getRemoteMeta(this.dropboxClient, fileOrFolderPath);
+    } else if (this.serviceType === "s3") {
+      return await s3.getRemoteMeta(s3.getS3Client(this.s3Config), this.s3Config, fileOrFolderPath);
+    } else if (this.serviceType === "onedrive") {
+      return await onedrive.getRemoteMeta(this.onedriveClient, fileOrFolderPath);
+    } else if (this.serviceType === "webdav") {
+      return await webdav.getRemoteMeta(this.webdavClient, fileOrFolderPath);
     }
   };
 

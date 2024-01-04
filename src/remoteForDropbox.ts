@@ -468,9 +468,11 @@ export const getRemoteMeta = async (
         recursive: false, // don't need to recursive here
       })
     );
+
     if (rsp.status !== 200) {
       throw Error(JSON.stringify(rsp));
     }
+    
     return {
       key: fileOrFolderPath,
       lastModified: undefined,

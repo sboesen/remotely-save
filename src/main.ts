@@ -420,7 +420,7 @@ export default class RemotelySavePlugin extends Plugin {
     const {remoteStates, metadataFile} = await this.parseRemoteItems(remoteRsp.Contents, client);
     const metadataPath = await getMetadataPath(metadataFile, this.settings.password);
 
-    return await client.getMetadataMtime(metadataPath);
+    return (await client.getMetadataFromRemote(metadataPath)).lastModified;
   }
 
   private async parseRemoteItems(contents: RemoteItem[], client: RemoteClient) {
@@ -734,6 +734,8 @@ export default class RemotelySavePlugin extends Plugin {
       this.registerInterval(window.setInterval(async () => {
         // Check for remote changes every specified time
         const metadataMtime = await this.getMetadataMtime();
+        console.log(metadataMtime);
+
       }, 1000 * 3));
     }
 
