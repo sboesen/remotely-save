@@ -116,6 +116,7 @@ export default class RemotelySavePlugin extends Plugin {
   syncRibbon?: HTMLElement;
   autoRunIntervalID?: number;
   syncOnSaveIntervalID?: number;
+  syncOnRemoteChangeIntervalID?: number;
   i18n: I18n;
   vaultRandomID: string;
   isManual: boolean;
@@ -285,7 +286,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.syncStatus = "idle";
 
       this.lastModified = await this.getMetadataMtime();
-      
+
       this.updateLastSyncTime();
     } catch (error) {
       const msg = t("syncrun_abort", {
