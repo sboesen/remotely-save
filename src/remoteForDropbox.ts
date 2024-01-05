@@ -468,9 +468,11 @@ export const getRemoteMeta = async (
         recursive: false, // don't need to recursive here
       })
     );
+
     if (rsp.status !== 200) {
       throw Error(JSON.stringify(rsp));
     }
+    
     return {
       key: fileOrFolderPath,
       lastModified: undefined,
@@ -501,6 +503,7 @@ function getDateStringFromMtime(mtime: number) {
 
 async function getDropboxMtimeString(vault: Vault, fileOrFolderPath: string) : Promise<string> {
   const fileStat = await statFix(vault, fileOrFolderPath);
+
   if (fileStat) {
     const mtimeString = getDateStringFromMtime(fileStat.mtime);
   }
@@ -602,7 +605,7 @@ export const uploadToRemote = async (
     // in dropbox, we don't need to create folders before uploading! cool!
     // TODO: filesUploadSession for larger files (>=150 MB)
     let mtimeString = await getDropboxMtimeString(vault, fileOrFolderPath);
-
+    
     await retryReq(
       () =>
         client.dropbox.filesUpload({

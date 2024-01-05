@@ -81,6 +81,7 @@ export interface RemotelySavePluginSettings {
   autoRunEveryMilliseconds?: number;
   initRunAfterMilliseconds?: number;
   syncOnSaveAfterMilliseconds?: number;
+  syncOnRemoteChangesAfterMilliseconds?: number;
   agreeToUploadExtraMetadata?: boolean;
   concurrency?: number;
   syncConfigDir?: boolean;

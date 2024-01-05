@@ -1088,6 +1088,26 @@ export const uploadExtraMeta = async (
   );
 };
 
+export const getMetadataPath = async (metadataFile: FileOrFolderMixedState | undefined, password: string = "") => {
+  if (metadataFile === undefined) {
+    log.debug("no metadata file, so no file path");
+    return;
+  }
+
+  const key = DEFAULT_FILE_NAME_FOR_METADATAONREMOTE;
+  let remoteEncryptedKey = key;
+
+  if (password !== "") {
+    remoteEncryptedKey = metadataFile.remoteEncryptedKey;
+
+    if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
+      remoteEncryptedKey = await encryptStringToBase64url(key, password);
+    }
+  }
+
+  return remoteEncryptedKey;
+};
+
 const dispatchOperationToActual = async (
   key: string,
   vaultRandomID: string,

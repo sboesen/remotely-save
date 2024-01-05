@@ -1567,6 +1567,32 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     new Setting(basicDiv)
+    .setName(t("settings_remoterun"))
+    .setDesc(t("settings_remoterun_desc"))
+    .addDropdown((dropdown) => {
+      dropdown.addOption("-1", t("settings_remoterun_notset"));
+      dropdown.addOption(`${1000 * 1}`, t("settings_remoterun_1sec"));
+      dropdown.addOption(`${1000 * 5}`, t("settings_remoterun_5sec"));
+      dropdown.addOption(`${1000 * 10}`, t("settings_remoterun_10sec"));
+      dropdown.addOption(`${1000 * 60}`, t("settings_remoterun_1min"));
+      
+      dropdown
+        .setValue(`${this.plugin.settings.syncOnRemoteChangesAfterMilliseconds}`)
+        .onChange(async (val: string) => {
+          const realVal = parseInt(val);
+          this.plugin.settings.syncOnRemoteChangesAfterMilliseconds = realVal;
+
+          await this.plugin.saveSettings();
+
+          if (realVal <= 0) {
+            this.plugin.toggleSyncOnRemote(false);
+          } else {
+            this.plugin.toggleSyncOnRemote(true);
+          }
+        });
+    });
+
+    new Setting(basicDiv)
       .setName(t("settings_autorun"))
       .setDesc(t("settings_autorun_desc"))
       .addDropdown((dropdown) => {

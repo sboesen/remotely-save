@@ -48,7 +48,7 @@ import { DEFAULT_S3_CONFIG } from "./remoteForS3";
 import { DEFAULT_WEBDAV_CONFIG } from "./remoteForWebdav";
 import { RemotelySaveSettingTab } from "./settings";
 import {fetchMetadataFile, parseRemoteItems, SyncPlanType, SyncStatusType} from "./sync";
-import { doActualSync, getSyncPlan, isPasswordOk } from "./sync";
+import { doActualSync, getSyncPlan, isPasswordOk, getMetadataPath } from "./sync";
 import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
 import { ObsConfigDirFileType, listFilesInObsFolder } from "./obsFolderLister";
 import { I18n } from "./i18n";
@@ -79,6 +79,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   autoRunEveryMilliseconds: -1,
   initRunAfterMilliseconds: -1,
   syncOnSaveAfterMilliseconds: -1,
+  syncOnRemoteChangesAfterMilliseconds: -1,
   agreeToUploadExtraMetadata: false,
   concurrency: 5,
   syncConfigDir: false,
@@ -109,12 +110,14 @@ export default class RemotelySavePlugin extends Plugin {
   settings: RemotelySavePluginSettings;
   db: InternalDBs;
   syncStatus: SyncStatusType;
+  lastModified: number;
   statusBarElement: HTMLSpanElement;
   oauth2Info: OAuth2Info;
   currSyncMsg?: string;
   syncRibbon?: HTMLElement;
   autoRunIntervalID?: number;
   syncOnSaveIntervalID?: number;
+  syncOnRemoteIntervalID?: any;
   i18n: I18n;
   vaultRandomID: string;
   isManual: boolean;
@@ -282,6 +285,8 @@ export default class RemotelySavePlugin extends Plugin {
       );
       this.syncStatus = "finish";
       this.syncStatus = "idle";
+
+      this.lastModified = await this.getMetadataMtime();
 
       this.updateLastSyncTime();
     } catch (error) {
@@ -807,6 +812,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.enableAutoSyncIfSet();
       this.enableInitSyncIfSet();
       this.enableSyncOnSaveIfSet();
+      this.toggleSyncOnRemote(true);
     }
   }
 
@@ -815,6 +821,10 @@ export default class RemotelySavePlugin extends Plugin {
     if (this.oauth2Info !== undefined) {
       this.oauth2Info.helperModal = undefined;
       this.oauth2Info = undefined;
+    }
+    
+    if (this.syncOnRemoteIntervalID !== undefined) {
+      window.clearInterval(this.syncOnRemoteIntervalID);
     }
   }
 
@@ -1042,6 +1052,39 @@ export default class RemotelySavePlugin extends Plugin {
         this.registerInterval(intervalIDSyncOnSave);
       });
     }
+  }
+
+  toggleSyncOnRemote(enabled: boolean) {
+    if (this.syncOnRemoteIntervalID !== undefined) {
+      window.clearInterval(this.syncOnRemoteIntervalID);
+      this.syncOnRemoteIntervalID = undefined;
+    }
+
+    if (enabled === false || this.settings.syncOnRemoteChangesAfterMilliseconds === -1) {
+      return;
+    }
+
+    this.syncOnRemoteIntervalID = window.setInterval(async () => {
+      if (this.syncStatus !== "idle") {
+        return;
+      }
+
+      const metadataMtime = await this.getMetadataMtime();
+
+      if (metadataMtime !== this.lastModified) {
+        this.syncRun("auto");
+      }
+    }, this.settings.syncOnRemoteChangesAfterMilliseconds);
+  }
+  
+  async getMetadataMtime() {
+    const client = this.getRemoteClient(this);
+
+    const remoteRsp = await client.listFromRemote();
+    const {remoteStates, metadataFile} = await this.parseRemoteItems(remoteRsp.Contents, client);
+    const metadataPath = await getMetadataPath(metadataFile, this.settings.password);
+
+    return (await client.getMetadataFromRemote(metadataPath)).lastModified;
   }
 
   private async getSyncPlan2() {
