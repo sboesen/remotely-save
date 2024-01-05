@@ -505,7 +505,7 @@ async function getDropboxMtimeString(vault: Vault, fileOrFolderPath: string) : P
   const fileStat = await statFix(vault, fileOrFolderPath);
 
   if (fileStat) {
-    const mtimeString = getDateStringFromMtime(fileStat.mtime);
+    return getDateStringFromMtime(fileStat.mtime);
   }
   return undefined;
 }
