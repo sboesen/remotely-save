@@ -1084,6 +1084,10 @@ export default class RemotelySavePlugin extends Plugin {
     const {remoteStates, metadataFile} = await this.parseRemoteItems(remoteRsp.Contents, client);
     const metadataPath = await getMetadataPath(metadataFile, this.settings.password);
 
+    if (metadataPath == undefined) {
+      return undefined;
+    }
+    
     return (await client.getMetadataFromRemote(metadataPath)).lastModified;
   }
 
