@@ -496,7 +496,7 @@ export const getRemoteMeta = async (
 };
 
 function getDateStringFromMtime(mtime: number) {
-  const date = new Date(mtime * 1000);
+  const date = new Date(mtime);
   const isoString = date.toISOString();
   return isoString.slice(0, 19) + 'Z'; // strip off milliseconds
 }
