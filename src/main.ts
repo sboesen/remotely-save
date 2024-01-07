@@ -104,6 +104,7 @@ interface OAuth2Info {
 
 const iconNameSyncWait = "rotate-ccw";
 const iconNameSyncRunning = "refresh-ccw";
+const iconNameStatusBar = "refresh-ccw-dot";
 const iconNameLogs = "file-text";
 
 export default class RemotelySavePlugin extends Plugin {
@@ -806,7 +807,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.addCommand({
         id: "get-sync-status",
         name: t("command_syncstatus"),
-        icon: iconNameSyncWait,
+        icon: iconNameStatusBar,
         callback: async () => {
           if (this.syncStatus === "idle") {
             new Notice(getLastSynced(this.i18n, this.settings.lastSuccessSync).lastSyncMsg);
