@@ -290,9 +290,9 @@ export default class RemotelySavePlugin extends Plugin {
       this.updateLastSyncTime();
       this.syncingStatusText = undefined;
 
-      this.syncStatus = "idle";
-
       this.lastModified = await this.getMetadataMtime();
+
+      this.syncStatus = "idle";
     } catch (error) {
       const msg = t("syncrun_abort", {
         manifestID: this.manifest.id,
@@ -858,9 +858,8 @@ export default class RemotelySavePlugin extends Plugin {
       this.oauth2Info = undefined;
     }
     
-    if (this.syncOnRemoteIntervalID !== undefined) {
-      window.clearInterval(this.syncOnRemoteIntervalID);
-    }
+    // Clear intervals
+    this.toggleSyncOnRemote(false);
   }
 
   async loadSettings() {
@@ -1090,6 +1089,7 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   toggleSyncOnRemote(enabled: boolean) {
+    // Clears the current interval
     if (this.syncOnRemoteIntervalID !== undefined) {
       window.clearInterval(this.syncOnRemoteIntervalID);
       this.syncOnRemoteIntervalID = undefined;
@@ -1099,8 +1099,9 @@ export default class RemotelySavePlugin extends Plugin {
       return;
     }
 
-    this.syncOnRemoteIntervalID = window.setInterval(async () => {
-      if (this.syncStatus !== "idle") {
+    const interval = window.setInterval(async () => {
+      // Prevents it from running multiple setIntervals, this will only happen if the plugin doesn't unload properly
+      if (this.syncStatus !== "idle" || this.syncOnRemoteIntervalID !== interval) {
         return;
       }
 
@@ -1110,6 +1111,8 @@ export default class RemotelySavePlugin extends Plugin {
         this.syncRun("auto");
       }
     }, this.settings.syncOnRemoteChangesAfterMilliseconds);
+
+    this.syncOnRemoteIntervalID = interval;
   }
   
   async getMetadataMtime() {
