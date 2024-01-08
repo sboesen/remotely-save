@@ -1,7 +1,7 @@
 {
   "id": "remotely-secure",
   "name": "Remotely Sync",
-  "version": "0.4.35",
+  "version": "0.4.36",
   "minAppVersion": "1.4.11",
   "description": "Security and feature updates for the remotely-save unofficial plugin allowing users to synchronize notes between local device and the cloud service. Not backwards compatible.",
   "author": "sboesen",
