@@ -25,12 +25,20 @@ export interface DeletionOnRemote {
   actionWhen: number;
 }
 
+// TODO: Implement device id or something similar for external
+export interface HistoryOnRemote {
+  time: number;
+  success: boolean;
+}
+
 export interface MetadataOnRemote {
   version?: string;
   generatedWhen?: number;
   deletions?: DeletionOnRemote[];
+  history?: HistoryOnRemote[];
 }
 
+// Will this need to compare sync history?
 export const isEqualMetadataOnRemote = (
   a: MetadataOnRemote,
   b: MetadataOnRemote
@@ -55,6 +63,9 @@ export const serializeMetadataOnRemote = (x: MetadataOnRemote) => {
   }
   if (y["deletions"] === undefined) {
     y["deletions"] = [];
+  }
+  if (y["history"] === undefined) {
+    y["history"] = [];
   }
 
   const z = {

@@ -5,7 +5,8 @@ import {
   Setting,
   setIcon,
   FileSystemAdapter,
-  Platform, TAbstractFile, Vault
+  Platform, TAbstractFile, Vault,
+  WorkspaceLeaf
 } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
 import type {
@@ -66,6 +67,8 @@ import {
 } from "./debugMode";
 import { SizesConflictModal } from "./syncSizesConflictNotice";
 import {mkdirpInVault, getLastSynced} from "./misc";
+
+import { HistoryView, VIEW_TYPE_HISTORY } from "./historyView";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
@@ -412,7 +415,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.vaultRandomID
     );
   }
-
+  
   private async fetchMetadataFromRemote(metadataFile: FileOrFolderMixedState, client: RemoteClient) {
     if (metadataFile === undefined) {
       log.debug("no metadata file, so no fetch");
@@ -750,6 +753,21 @@ export default class RemotelySavePlugin extends Plugin {
         this.updateLastSuccessSyncMsg(this.settings.lastSuccessSync);
       }, 1000 * 30));
     }
+
+    // Register history right leaf view
+    this.registerView(
+      VIEW_TYPE_HISTORY,
+      (leaf) => new HistoryView(leaf, this)
+    );
+
+    this.addCommand({
+      id: "open-sync-history",
+      name: "Open Sync History", // I'll do translations after
+
+      callback: async () => {
+        this.activateHistoryView();
+      },
+    });
 
     this.addCommand({
       id: "start-sync",
@@ -1246,6 +1264,22 @@ export default class RemotelySavePlugin extends Plugin {
     } catch (error) {
       // just skip
     }
+  }
+
+  async activateHistoryView() {
+    const { workspace } = this.app;
+
+    let leaf: WorkspaceLeaf | null = null;
+    const leaves = workspace.getLeavesOfType(VIEW_TYPE_HISTORY);
+
+    if (leaves.length > 0) {
+      leaf = leaves[0];
+    } else {
+      leaf = workspace.getRightLeaf(false);
+      await leaf.setViewState({ type: VIEW_TYPE_HISTORY, active: true });
+    }
+
+    workspace.revealLeaf(leaf);
   }
 
   addOutputToDBIfSet() {

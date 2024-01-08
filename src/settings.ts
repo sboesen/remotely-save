@@ -2022,6 +2022,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             undefined,
             undefined,
             [],
+            false,
             this.plugin.settings.password );
           new Notice(t("settings_reset_sync_metadata_notice"));
         });
