@@ -1370,17 +1370,6 @@ export const doActualSync = async (
     return;
   }
 
-  log.debug(`start syncing extra data firstly`);
-  await uploadExtraMeta(
-    client,
-    vault,
-    metadataFile,
-    origMetadata,
-    deletions,
-    password
-  );
-  log.debug(`finish syncing extra data firstly`);
-
   log.debug(`concurrency === ${concurrency}`);
   if (concurrency === 1) {
     // run everything in sequence
@@ -1460,6 +1449,17 @@ export const doActualSync = async (
           }
           throw new AggregateError(potentialErrors);
         }
+
+        log.debug(`start syncing extra data lastly`);
+        await uploadExtraMeta(
+          client,
+          vault,
+          metadataFile,
+          origMetadata,
+          deletions,
+          password
+        );
+        log.debug(`finish syncing extra data`);
       }
   }
 };
