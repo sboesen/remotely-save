@@ -82,6 +82,14 @@ You are greatly welcome to ask questions, post any suggestions, or report any bu
 
 ## Contributing
 
+Please see our [GitHub project](https://github.com/users/sboesen/projects/1) for a prioritized list of issues.
+
+General priorities (may change):
+P0: Top priority, sync broken or risk of data loss for all remote providers.
+P1: Issue or major feature gap for all providers, usually has workaround
+P2: Sync issue for some providers but not all, or for some users but not all
+P3: Nice to have, or cosmetic issue. Does not impact sync.
+
 Building the project:
 ```
 git clone https://github.com/sboesen/remotely-sync
