@@ -54,7 +54,7 @@ import { ObsConfigDirFileType, listFilesInObsFolder } from "./obsFolderLister";
 import { I18n } from "./i18n";
 import type { LangType, LangTypeAndAuto, TransItemType } from "./i18n";
 
-import { DeletionOnRemote, MetadataOnRemote } from "./metadataOnRemote";
+import {DeletionOnRemote, deserializeMetadataOnRemote, MetadataOnRemote} from "./metadataOnRemote";
 import { SyncAlgoV2Modal } from "./syncAlgoV2Notice";
 import { applyPresetRulesInplace } from "./presetRules";
 
@@ -414,12 +414,22 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   private async fetchMetadataFromRemote(metadataFile: FileOrFolderMixedState, client: RemoteClient) {
-    return await fetchMetadataFile(
-      metadataFile,
-      client,
+    if (metadataFile === undefined) {
+      log.debug("no metadata file, so no fetch");
+      return {
+        deletions: [],
+      } as MetadataOnRemote;
+    }
+
+    const buf = await client.downloadFromRemote(
+      metadataFile.key,
       this.app.vault,
-      this.settings.password
+      metadataFile.mtimeRemote,
+      this.settings.password,
+      metadataFile.remoteEncryptedKey,
+      true
     );
+    return deserializeMetadataOnRemote(buf);
   }
 
   private async parseRemoteItems(contents: RemoteItem[], client: RemoteClient) {
