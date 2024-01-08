@@ -25,23 +25,34 @@ export interface DeletionOnRemote {
   actionWhen: number;
 }
 
+export interface FileOnRemote {
+  key: string;
+  mtime: number;
+  hash: string;
+}
+
 export interface MetadataOnRemote {
   version?: string;
   generatedWhen?: number;
   deletions?: DeletionOnRemote[];
+  filesOnRemote?: FileOnRemote[];
 }
 
 export const isEqualMetadataOnRemote = (
   a: MetadataOnRemote,
   b: MetadataOnRemote
 ) => {
-  const m1 = a === undefined ? { deletions: [] } : a;
-  const m2 = b === undefined ? { deletions: [] } : b;
+  const m1 = a === undefined ? { deletions: [], filesOnRemote: [] } : a;
+  const m2 = b === undefined ? { deletions: [], filesOnRemote: [] } : b;
 
   // we only need to compare deletions
   const d1 = m1.deletions === undefined ? [] : m1.deletions;
   const d2 = m2.deletions === undefined ? [] : m2.deletions;
-  return isEqual(d1, d2);
+
+  // Compare files on remote.
+  const f1 = m1.filesOnRemote == undefined ? [] : m1.filesOnRemote;
+  const f2 = m2.filesOnRemote == undefined ? [] : m1.filesOnRemote;
+  return isEqual(d1, d2) && isEqual(f1, f2);
 };
 
 export const serializeMetadataOnRemote = (x: MetadataOnRemote) => {
@@ -55,6 +66,9 @@ export const serializeMetadataOnRemote = (x: MetadataOnRemote) => {
   }
   if (y["deletions"] === undefined) {
     y["deletions"] = [];
+  }
+  if (y["filesOnRemote"] === undefined) {
+    y["filesOnRemote"] = [];
   }
 
   const z = {

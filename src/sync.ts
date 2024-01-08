@@ -45,7 +45,7 @@ import {
   DEFAULT_FILE_NAME_FOR_METADATAONREMOTE,
   DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2,
   FILE_NAME_FOR_BOOKMARK_FILE,
-  isEqualMetadataOnRemote, FILE_NAME_FOR_DATA_JSON,
+  isEqualMetadataOnRemote, FILE_NAME_FOR_DATA_JSON, FileOnRemote,
 } from "./metadataOnRemote";
 import {isInsideObsFolder, isInsideTrashFolder, ObsConfigDirFileType} from "./obsFolderLister";
 
@@ -484,6 +484,7 @@ const ensembleMixedStates = async (
 const assignOperationToFileInplace = (
   origRecord: FileOrFolderMixedState,
   keptFolder: Set<string>,
+  remoteFiles: FileOnRemote[],
   skipSizeLargerThan: number,
   password: string = ""
 ) => {
@@ -590,8 +591,11 @@ const assignOperationToFileInplace = (
           }
         }
       } else {
-        // we have local laregest mtime,
+        // we have local largest mtime,
         // and the remote not existing or smaller mtime
+
+        // TODO: Check file hash against hashes on remote
+
         if (skipSizeLargerThan <= 0) {
           // no need to consider sizes
           r.decision = "uploadLocalToRemote";
@@ -630,6 +634,7 @@ const assignOperationToFileInplace = (
 
   // 2. mtimeRemote
   if (r.existRemote) {
+    // TODO: Check if file hash matches remoteFiles.
     const mtimeLocal = r.existLocal ? r.mtimeLocal : -1;
     const deltimeRemote = r.deltimeRemote !== undefined ? r.deltimeRemote : -1;
     const deltimeLocal = r.deltimeLocal !== undefined ? r.deltimeLocal : -1;
@@ -935,7 +940,7 @@ export const getSyncPlan = async (
   remoteStates: FileOrFolderMixedState[],
   local: TAbstractFile[],
   localConfigDirContents: ObsConfigDirFileType[] | undefined,
-  remoteDeleteHistory: DeletionOnRemote[],
+  remoteMetadata: MetadataOnRemote,
   localFileHistory: FileFolderHistoryRecord[],
   remoteType: SUPPORTED_SERVICES_TYPE,
   triggerSource: SyncTriggerSourceType,
@@ -948,6 +953,8 @@ export const getSyncPlan = async (
   skipSizeLargerThan: number,
   password: string = ""
 ) => {
+  const remoteDeleteHistory = remoteMetadata.deletions;
+  const remoteFiles = remoteMetadata.filesOnRemote;
   const mixedStates = await ensembleMixedStates(
     remoteStates,
     local,
@@ -985,6 +992,7 @@ export const getSyncPlan = async (
       assignOperationToFileInplace(
         val,
         keptFolder,
+        remoteFiles,
         skipSizeLargerThan,
         password
       );

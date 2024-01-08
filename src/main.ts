@@ -391,7 +391,7 @@ export default class RemotelySavePlugin extends Plugin {
       remoteStates,
       local,
       localConfigDirContents,
-      origMetadataOnRemote.deletions,
+      origMetadataOnRemote,
       localHistory,
       client.serviceType,
       triggerSource,
