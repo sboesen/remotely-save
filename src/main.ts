@@ -290,9 +290,9 @@ export default class RemotelySavePlugin extends Plugin {
       this.updateLastSyncTime();
       this.syncingStatusText = undefined;
 
-      this.syncStatus = "idle";
-
       this.lastModified = await this.getMetadataMtime();
+
+      this.syncStatus = "idle";
     } catch (error) {
       const msg = t("syncrun_abort", {
         manifestID: this.manifest.id,
