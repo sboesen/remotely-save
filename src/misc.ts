@@ -3,6 +3,8 @@ import { base32, base64url } from "rfc4648";
 import XRegExp from "xregexp";
 import emojiRegex from "emoji-regex";
 
+import type { I18n, LangType, LangTypeAndAuto, TransItemType } from "./i18n";
+
 import { log } from "./moreOnLog";
 
 /**
@@ -452,3 +454,53 @@ export const statFix = async (vault: Vault, path: string) => {
   }
   return s;
 };
+
+export function getLastSynced(i18n: I18n, lastSuccessSyncMillis?: number): {lastSyncMsg: string, lastSyncLabelMsg: string} {
+  const t = (x: TransItemType, vars?: any) => {
+    return i18n.t(x, vars);
+  };
+
+  let lastSynced = {
+    lastSyncMsg: t("statusbar_lastsync_never"),
+    lastSyncLabelMsg: t("statusbar_lastsync_never_label")
+  };
+
+  if (lastSuccessSyncMillis !== undefined && lastSuccessSyncMillis > 0) {
+    const deltaTime = Date.now() - lastSuccessSyncMillis;
+
+    // create human readable time
+    const years = Math.floor(deltaTime / 31556952000);
+    const months = Math.floor(deltaTime / 2629746000);
+    const weeks = Math.floor(deltaTime / 604800000);
+    const days = Math.floor(deltaTime / 86400000);
+    const hours = Math.floor(deltaTime / 3600000);
+    const minutes = Math.floor(deltaTime / 60000);
+    let timeText = "";
+
+    if (years > 0) {
+      timeText = t("statusbar_time_years", { time: years });
+    } else if (months > 0) {
+      timeText = t("statusbar_time_months", { time: months });
+    } else if (weeks > 0) {
+      timeText = t("statusbar_time_weeks", { time: weeks });
+    } else if (days > 0) {
+      timeText = t("statusbar_time_days", { time: days });
+    } else if (hours > 0) {
+      timeText = t("statusbar_time_hours", { time: hours });
+    } else if (minutes > 0) {
+      timeText = t("statusbar_time_minutes", { time: minutes });
+    } else {
+      timeText = t("statusbar_time_lessminute");
+    }
+
+    let dateText = new Date(lastSuccessSyncMillis)
+      .toLocaleTimeString(navigator.language, {
+        weekday: "long", year: "numeric", month: "long", day: "numeric"
+      });
+
+    lastSynced.lastSyncMsg = t("statusbar_lastsync", { time: timeText });
+    lastSynced.lastSyncLabelMsg = t("statusbar_lastsync_label", { date: dateText });
+  }
+
+  return lastSynced;
+}

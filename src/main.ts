@@ -65,7 +65,7 @@ import {
   exportVaultSyncPlansToFiles,
 } from "./debugMode";
 import { SizesConflictModal } from "./syncSizesConflictNotice";
-import {mkdirpInVault} from "./misc";
+import {mkdirpInVault, getLastSynced} from "./misc";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
@@ -104,6 +104,7 @@ interface OAuth2Info {
 
 const iconNameSyncWait = "rotate-ccw";
 const iconNameSyncRunning = "refresh-ccw";
+const iconNameStatusBar = "refresh-ccw-dot";
 const iconNameLogs = "file-text";
 
 export default class RemotelySavePlugin extends Plugin {
@@ -114,6 +115,7 @@ export default class RemotelySavePlugin extends Plugin {
   statusBarElement: HTMLSpanElement;
   oauth2Info: OAuth2Info;
   currSyncMsg?: string;
+  syncingStatusText?: string;
   syncRibbon?: HTMLElement;
   autoRunIntervalID?: number;
   syncOnSaveIntervalID?: number;
@@ -284,11 +286,13 @@ export default class RemotelySavePlugin extends Plugin {
         }), 8
       );
       this.syncStatus = "finish";
+
+      this.updateLastSyncTime();
+      this.syncingStatusText = undefined;
+
       this.syncStatus = "idle";
 
       this.lastModified = await this.getMetadataMtime();
-
-      this.updateLastSyncTime();
     } catch (error) {
       const msg = t("syncrun_abort", {
         manifestID: this.manifest.id,
@@ -799,6 +803,27 @@ export default class RemotelySavePlugin extends Plugin {
       },
     });
 
+    if (Platform.isDesktop === false) {
+      this.addCommand({
+        id: "get-sync-status",
+        name: t("command_syncstatus"),
+        icon: iconNameStatusBar,
+        callback: async () => {
+          if (this.syncStatus === "idle") {
+            new Notice(getLastSynced(this.i18n, this.settings.lastSuccessSync).lastSyncMsg);
+          } else if (this.syncStatus === "syncing") {
+            if (this.syncingStatusText !== undefined) {
+              new Notice(this.syncingStatusText);
+            } else {
+              new Notice(t("syncrun_status_preparing"));
+            }
+          } else {
+            new Notice(t("syncrun_status_preparing"));
+          }
+        },
+      });
+    }
+
     this.addSettingTab(new RemotelySaveSettingTab(this.app, this));
 
     // this.registerDomEvent(document, "click", (evt: MouseEvent) => {
@@ -1154,12 +1179,14 @@ export default class RemotelySavePlugin extends Plugin {
     i: number,
     totalCount: number
   ) {
-    this.updateStatusBarText(this.i18n.t("syncrun_status_progress", {
+    const text = this.i18n.t("syncrun_status_progress", {
       current: i.toString(),
       total: totalCount.toString()
-    }));
-  
-    
+    });
+
+    this.syncingStatusText = text;
+
+    this.updateStatusBarText(text);
   }
 
   updateStatusBarText(statusText: string) {
@@ -1173,52 +1200,10 @@ export default class RemotelySavePlugin extends Plugin {
   updateLastSuccessSyncMsg(lastSuccessSyncMillis?: number) {
     if (this.statusBarElement === undefined) return;
 
-    const t = (x: TransItemType, vars?: any) => {
-      return this.i18n.t(x, vars);
-    };
+    const lastSynced = getLastSynced(this.i18n, lastSuccessSyncMillis);
 
-    let lastSyncMsg = t("statusbar_lastsync_never");
-    let lastSyncLabelMsg = t("statusbar_lastsync_never_label");
-
-    if (lastSuccessSyncMillis !== undefined && lastSuccessSyncMillis > 0) {
-      const deltaTime = Date.now() - lastSuccessSyncMillis;
-
-      // create human readable time
-      const years = Math.floor(deltaTime / 31556952000);
-      const months = Math.floor(deltaTime / 2629746000);
-      const weeks = Math.floor(deltaTime / 604800000);
-      const days = Math.floor(deltaTime / 86400000);
-      const hours = Math.floor(deltaTime / 3600000);
-      const minutes = Math.floor(deltaTime / 60000);
-      let timeText = "";
-
-      if (years > 0) {
-        timeText = t("statusbar_time_years", { time: years });
-      } else if (months > 0) {
-        timeText = t("statusbar_time_months", { time: months });
-      } else if (weeks > 0) {
-        timeText = t("statusbar_time_weeks", { time: weeks });
-      } else if (days > 0) {
-        timeText = t("statusbar_time_days", { time: days });
-      } else if (hours > 0) {
-        timeText = t("statusbar_time_hours", { time: hours });
-      } else if (minutes > 0) {
-        timeText = t("statusbar_time_minutes", { time: minutes });
-      } else {
-        timeText = t("statusbar_time_lessminute");
-      }
-
-      let dateText = new Date(lastSuccessSyncMillis)
-        .toLocaleTimeString(navigator.language, {
-          weekday: "long", year: "numeric", month: "long", day: "numeric"
-        });
-
-      lastSyncMsg = t("statusbar_lastsync", { time: timeText });
-      lastSyncLabelMsg = t("statusbar_lastsync_label", { date: dateText });
-    }
-
-    this.statusBarElement.setText(lastSyncMsg);
-    this.statusBarElement.setAttribute("aria-label", lastSyncLabelMsg);
+    this.statusBarElement.setText(lastSynced.lastSyncMsg);
+    this.statusBarElement.setAttribute("aria-label", lastSynced.lastSyncLabelMsg);
   }
 
   /**
