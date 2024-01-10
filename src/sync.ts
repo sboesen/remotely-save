@@ -1066,14 +1066,6 @@ export const uploadExtraMeta = async (
     deletions: deletions,
   };
 
-  // TODO: optimize and/or refactor this. Inefficient until user deletes a file
-  if (origMetadata && origMetadata.deletions.length > 0 && isEqualMetadataOnRemote(origMetadata, newMetadata)) {
-    log.debug(
-      "metadata are the same, no need to re-generate and re-upload it."
-    );
-    return;
-  }
-
   const resultText = serializeMetadataOnRemote(newMetadata);
 
   await client.uploadToRemote(
