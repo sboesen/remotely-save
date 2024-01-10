@@ -111,7 +111,7 @@ export default class RemotelySavePlugin extends Plugin {
   settings: RemotelySavePluginSettings;
   db: InternalDBs;
   syncStatus: SyncStatusType;
-  lastModified: number;
+  lastSynced: number;
   statusBarElement: HTMLSpanElement;
   oauth2Info: OAuth2Info;
   currSyncMsg?: string;
@@ -294,7 +294,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.updateLastSyncTime();
       this.syncingStatusText = undefined;
 
-      this.lastModified = await this.getMetadataMtime();
+      this.lastSynced = await this.getMetadataMtime();
 
       this.syncStatus = "idle";
     } catch (error) {
@@ -1111,7 +1111,9 @@ export default class RemotelySavePlugin extends Plugin {
 
       const metadataMtime = await this.getMetadataMtime();
 
-      if (metadataMtime !== this.lastModified) {
+      console.log("Remote Metadata: " + metadataMtime + " Last Synced: " + this.lastSynced);
+
+      if (metadataMtime !== this.lastSynced) {
         this.syncRun("auto");
       }
     }, this.settings.syncOnRemoteChangesAfterMilliseconds);
