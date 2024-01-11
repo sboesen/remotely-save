@@ -111,7 +111,7 @@ export default class RemotelySavePlugin extends Plugin {
   settings: RemotelySavePluginSettings;
   db: InternalDBs;
   syncStatus: SyncStatusType;
-  lastModified: number;
+  lastSynced: number;
   statusBarElement: HTMLSpanElement;
   oauth2Info: OAuth2Info;
   currSyncMsg?: string;
@@ -158,27 +158,30 @@ export default class RemotelySavePlugin extends Plugin {
       }
     };
 
-    if (this.syncStatus !== "idle" && triggerSource == "manual") {
-      // here the notice is shown regardless of triggerSource
+    // Make sure two syncs can't run at the same time
+    if (this.syncStatus !== "idle") {
+      if (triggerSource == "manual") {
+        new Notice(
+          "1/" + t("syncrun_alreadyrunning", {
+            maxSteps: `${MAX_STEPS}`,
+            pluginName: this.manifest.name,
+            syncStatus: this.syncStatus,
+          })
+        );
 
-      new Notice(
-        "1/" + t("syncrun_alreadyrunning", {
-          maxSteps: `${MAX_STEPS}`,
-          pluginName: this.manifest.name,
-          syncStatus: this.syncStatus,
-        })
-      );
+        // If already running, report finished status as user tried to manually sync
+        this.isManual = true;
 
-      // If already running, report finished status as user tried to manually sync
-      this.isManual = true;
+        log.debug(this.manifest.name, " already running in stage: ", this.syncStatus);
 
-      log.debug(this.manifest.name, " already running in stage: ", this.syncStatus);
-
-      if (this.currSyncMsg !== undefined && this.currSyncMsg !== "") {
-        log.debug(this.currSyncMsg);
+        if (this.currSyncMsg !== undefined && this.currSyncMsg !== "") {
+          log.debug(this.currSyncMsg);
+        }  
       }
+      
       return;
     }
+
     let originLabel = this.getOriginLabel();
 
     try {
@@ -221,6 +224,7 @@ export default class RemotelySavePlugin extends Plugin {
         }), 3
       );
       this.syncStatus = "checking_password";
+      
       const passwordCheckResult = await isPasswordOk(
         remoteRsp.Contents,
         this.settings.password
@@ -290,7 +294,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.updateLastSyncTime();
       this.syncingStatusText = undefined;
 
-      this.lastModified = await this.getMetadataMtime();
+      this.lastSynced = await this.getMetadataMtime();
 
       this.syncStatus = "idle";
     } catch (error) {
@@ -1100,14 +1104,15 @@ export default class RemotelySavePlugin extends Plugin {
     }
 
     const interval = window.setInterval(async () => {
-      // Prevents it from running multiple setIntervals, this will only happen if the plugin doesn't unload properly
+      // Tries to prevent it from running multiple setIntervals
       if (this.syncStatus !== "idle" || this.syncOnRemoteIntervalID !== interval) {
         return;
       }
 
       const metadataMtime = await this.getMetadataMtime();
 
-      if (metadataMtime !== this.lastModified) {
+      if (metadataMtime !== this.lastSynced) {
+        log.debug("Sync on Remote ran | Remote Metadata:", metadataMtime + ", Last Synced:", this.lastSynced);
         this.syncRun("auto");
       }
     }, this.settings.syncOnRemoteChangesAfterMilliseconds);

@@ -1066,14 +1066,6 @@ export const uploadExtraMeta = async (
     deletions: deletions,
   };
 
-  // TODO: optimize and/or refactor this. Inefficient until user deletes a file
-  if (origMetadata && origMetadata.deletions.length > 0 && isEqualMetadataOnRemote(origMetadata, newMetadata)) {
-    log.debug(
-      "metadata are the same, no need to re-generate and re-upload it."
-    );
-    return;
-  }
-
   const resultText = serializeMetadataOnRemote(newMetadata);
 
   await client.uploadToRemote(
@@ -1362,8 +1354,6 @@ export const doActualSync = async (
   callbackSizesGoWrong?: any,
   callbackSyncProcess?: any
 ) => {
-  const mixedStates = syncPlan.mixedStates;
-
   if (sizesGoWrong.length > 0) {
     log.debug(`some sizes are larger than the threshold, abort and show hints`);
     callbackSizesGoWrong(sizesGoWrong);
@@ -1371,21 +1361,8 @@ export const doActualSync = async (
   }
 
   log.debug(`concurrency === ${concurrency}`);
-  if (concurrency === 1) {
-    // run everything in sequence
-    // good old way
-    for (let i = 0; i < sortedKeys.length; ++i) {
-      const key = sortedKeys[i];
-      const val = mixedStates[key];
 
-      await syncIndividualItem(key, val, vaultRandomID, client, db, vault, localDeleteFunc, password);
-    }
-
-    return; // shortcut return, avoid too many nests below
-  }
-
-  const { folderCreationOps, deletionOps, uploadDownloads, realTotalCount } =
-    splitThreeSteps(syncPlan, sortedKeys);
+  const { folderCreationOps, deletionOps, uploadDownloads, realTotalCount } =  splitThreeSteps(syncPlan, sortedKeys);
   const nested = [folderCreationOps, deletionOps, uploadDownloads];
   const logTexts = [
     `1. create all folders from shadowest to deepest, also check undefined decision`,
@@ -1397,69 +1374,62 @@ export const doActualSync = async (
   " deletionOps: ", deletionOps.length,
   " uploadDownloads: ", uploadDownloads.length);
 
-  for (let i = 0; i < nested.length; ++i) {
-    log.debug(logTexts[i]);
-
-    const operations: FileOrFolderMixedState[][] = nested[i];
-
-    for (let j = 0; j < operations.length; ++j) {
-      const singleLevelOps: FileOrFolderMixedState[] | undefined =
-        operations[j];
-
+  // Sync files in order of folder creation, deletions and uploads/downloads
+  // Must be for of to stop rest of code running before promises resolve
+  for (const operation of nested) {
+    for (const singleLevelOps of operation) {
       if (singleLevelOps === undefined || singleLevelOps === null) {
         continue;
       }
 
       const queue = new PQueue({ concurrency: concurrency, autoStart: true });
       const potentialErrors: Error[] = [];
-      let tooManyErrors = false;
 
-      for (let k = 0; k < singleLevelOps.length; ++k) {
-        const val: FileOrFolderMixedState = singleLevelOps[k];
+      for (let i = 0; i < singleLevelOps.length; ++i) {
+        const val: FileOrFolderMixedState = singleLevelOps[i];
         const key = val.key;
 
-        const fn = async () => {
-          await syncIndividualItem(key, val, vaultRandomID, client, db, vault, localDeleteFunc, password);
-        };
+        const syncCall = queue.add(async () => await syncIndividualItem(key, val, vaultRandomID, client, db, vault, localDeleteFunc, password));
 
-        queue.add(fn).catch((e) => {
-          const msg = `${key}: ${e.message}`;
-          potentialErrors.push(new Error(msg));
+        syncCall.catch((error) => {
+          const message = `${key}: ${error.message}`;
+          potentialErrors.push(new Error(message));
+
           if (potentialErrors.length >= 3) {
-            tooManyErrors = true;
+            potentialErrors.push(new Error("too many errors, stop the remaining tasks"));
             queue.pause();
             queue.clear();
           }
-        });
+        })
       }
 
-      let queueSize = queue.size + queue.pending;
+      const queueSize = queue.size + queue.pending;
+
       queue.on('next', async () => {
         if (callbackSyncProcess !== undefined) {
-          await callbackSyncProcess(queueSize - queue.pending, queueSize);
+          const unsyncedItems = queue.size + queue.pending;
+          await callbackSyncProcess(unsyncedItems, queueSize);
         }
       });
+
       await queue.onIdle();
 
-        if (potentialErrors.length > 0) {
-          if (tooManyErrors) {
-            potentialErrors.push(
-              new Error("too many errors, stop the remaining tasks")
-            );
-          }
-          throw new AggregateError(potentialErrors);
-        }
-
-        log.debug(`start syncing extra data lastly`);
-        await uploadExtraMeta(
-          client,
-          vault,
-          metadataFile,
-          origMetadata,
-          deletions,
-          password
-        );
-        log.debug(`finish syncing extra data`);
+      if (potentialErrors.length > 0) {
+        throw new AggregateError(potentialErrors);
       }
+    }
   }
+
+  log.debug(`start syncing extra data lastly`);
+
+  await uploadExtraMeta(
+    client,
+    vault,
+    metadataFile,
+    origMetadata,
+    deletions,
+    password
+  );
+
+  log.debug(`finish syncing extra data lastly`);
 };
