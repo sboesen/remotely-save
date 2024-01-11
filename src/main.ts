@@ -482,7 +482,7 @@ export default class RemotelySavePlugin extends Plugin {
         //this.i18n.t("syncrun_status_syncing");
       }
     }
-    
+
     if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
       this.statusBarElement.setText(this.syncStatusText);
     }
@@ -1113,8 +1113,8 @@ export default class RemotelySavePlugin extends Plugin {
 
       const metadataMtime = await this.getMetadataMtime();
 
-      if (metadataMtime !== this.lastSynced) {
-        log.debug("Sync on Remote ran | Remote Metadata:", metadataMtime + ", Last Synced:", this.lastSynced);
+      if (metadataMtime !== this.settings.lastSynced) {
+        log.debug("Sync on Remote ran | Remote Metadata:", metadataMtime + ", Last Synced:", this.settings.lastSynced);
         this.syncRun("auto");
       }
     }, this.settings.syncOnRemoteChangesAfterMilliseconds);
