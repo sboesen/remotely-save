@@ -1113,6 +1113,10 @@ export default class RemotelySavePlugin extends Plugin {
 
       const metadataMtime = await this.getMetadataMtime();
 
+      if (metadataMtime === undefined) {
+        return;
+      }
+
       if (metadataMtime !== this.settings.lastSynced) {
         log.debug("Sync on Remote ran | Remote Metadata:", metadataMtime + ", Last Synced:", this.settings.lastSynced);
         this.syncRun("auto");
