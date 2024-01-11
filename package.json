@@ -1,6 +1,6 @@
 {
   "name": "remotely-sync",
-  "version": "0.4.36",
+  "version": "0.4.37",
   "description": "Security updates for the remotely-save unofficial plugin allowing users to synchronize notes between local device and the cloud service. Not backwards compatible.",
   "scripts": {
     "dev2": "node esbuild.config.mjs",
