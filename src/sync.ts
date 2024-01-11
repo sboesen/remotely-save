@@ -1403,15 +1403,17 @@ export const doActualSync = async (
         })
       }
 
-      const queueSize = queue.size + queue.pending;
+      if (operation === nested[2]) {
+        const queueSize = queue.size + queue.pending;
 
-      queue.on('next', async () => {
-        if (callbackSyncProcess !== undefined) {
-          const unsyncedItems = queue.size + queue.pending;
-          await callbackSyncProcess(unsyncedItems, queueSize);
-        }
-      });
-
+        queue.on('next', async () => {
+          if (callbackSyncProcess !== undefined) {
+            const unsyncedItems = queueSize - (queue.size + queue.pending);
+            await callbackSyncProcess(unsyncedItems, queueSize);
+          }
+        });
+      }
+      
       await queue.onIdle();
 
       if (potentialErrors.length > 0) {
