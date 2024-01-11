@@ -88,7 +88,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   logToDB: false,
   skipSizeLargerThan: -1,
   enableStatusBarInfo: true,
-  lastSuccessSync: -1,
+  lastSynced: -1,
   trashLocal: false,
   syncTrash: false,
   syncBookmarks: true,
@@ -111,11 +111,10 @@ export default class RemotelySavePlugin extends Plugin {
   settings: RemotelySavePluginSettings;
   db: InternalDBs;
   syncStatus: SyncStatusType;
-  lastSynced: number;
+  syncStatusText?: string;
   statusBarElement: HTMLSpanElement;
   oauth2Info: OAuth2Info;
   currSyncMsg?: string;
-  syncingStatusText?: string;
   syncRibbon?: HTMLElement;
   autoRunIntervalID?: number;
   syncOnSaveIntervalID?: number;
@@ -204,16 +203,15 @@ export default class RemotelySavePlugin extends Plugin {
           serviceType: this.settings.serviceType,
         }), 1
       );
-      this.syncStatus = "preparing";
 
-      this.updateStatusBarText(t("syncrun_status_preparing"));
+      this.updateSyncStatus("preparing");
 
       getNotice(
         t("syncrun_step2", {
           maxSteps: `${MAX_STEPS}`,
         }), 2
       );
-      this.syncStatus = "getting_remote_files_list";
+      this.updateSyncStatus("getting_remote_files_list");
       const self = this;
       const client = this.getRemoteClient(self);
       const remoteRsp = await client.listFromRemote();
@@ -223,7 +221,8 @@ export default class RemotelySavePlugin extends Plugin {
           maxSteps: `${MAX_STEPS}`,
         }), 3
       );
-      this.syncStatus = "checking_password";
+
+      this.updateSyncStatus("checking_password");
       
       const passwordCheckResult = await isPasswordOk(
         remoteRsp.Contents,
@@ -239,7 +238,7 @@ export default class RemotelySavePlugin extends Plugin {
           maxSteps: `${MAX_STEPS}`,
         }), 4
       );
-      this.syncStatus = "getting_remote_extra_meta";
+      this.updateSyncStatus("getting_remote_extra_meta");
       const { remoteStates, metadataFile } = await this.parseRemoteItems(remoteRsp.Contents, client);
       const origMetadataOnRemote = await this.fetchMetadataFromRemote(metadataFile, client);
 
@@ -248,7 +247,7 @@ export default class RemotelySavePlugin extends Plugin {
           maxSteps: `${MAX_STEPS}`,
         }), 5
       );
-      this.syncStatus = "getting_local_meta";
+      this.updateSyncStatus("getting_local_meta");
       const local = this.app.vault.getAllLoadedFiles();
       const localHistory = await this.getLocalHistory();
       let localConfigDirContents: ObsConfigDirFileType[] = await listFilesInObsFolder(this.app.vault, this.manifest.name, this.settings.syncTrash);
@@ -258,7 +257,8 @@ export default class RemotelySavePlugin extends Plugin {
           maxSteps: `${MAX_STEPS}`,
         }), 6
       );
-      this.syncStatus = "generating_plan";
+
+      this.updateSyncStatus("generating_plan");
       const { plan, sortedKeys, deletions, sizesGoWrong } = await this.getSyncPlan(remoteStates, local, localConfigDirContents, origMetadataOnRemote, localHistory, client, triggerSource);
 
       await insertSyncPlanRecordByVault(this.db, plan, this.vaultRandomID);
@@ -273,10 +273,10 @@ export default class RemotelySavePlugin extends Plugin {
           }), 7
         );
 
-        this.syncStatus = "syncing";
+        this.updateSyncStatus("syncing");
         await this.doActualSync(client, plan, sortedKeys, metadataFile, origMetadataOnRemote, sizesGoWrong, deletions, self);
       } else {
-        this.syncStatus = "syncing";
+        this.updateSyncStatus("syncing");
         getNotice(
           t("syncrun_step7skip", {
             maxSteps: `${MAX_STEPS}`,
@@ -289,14 +289,13 @@ export default class RemotelySavePlugin extends Plugin {
           maxSteps: `${MAX_STEPS}`,
         }), 8
       );
-      this.syncStatus = "finish";
 
-      this.updateLastSyncTime();
-      this.syncingStatusText = undefined;
+      this.updateSyncStatus("finish");
 
-      this.lastSynced = await this.getMetadataMtime();
+      this.settings.lastSynced = await this.getMetadataMtime();
+      this.saveSettings();
 
-      this.syncStatus = "idle";
+      this.updateSyncStatus("idle");
     } catch (error) {
       const msg = t("syncrun_abort", {
         manifestID: this.manifest.id,
@@ -314,12 +313,17 @@ export default class RemotelySavePlugin extends Plugin {
       } else {
         getNotice(error.message, -1, 10 * 1000);
       }
-      this.syncStatus = "idle";
+      this.updateSyncStatus("idle");
       if (this.syncRibbon !== undefined) {
         setIcon(this.syncRibbon, iconNameSyncWait);
         this.syncRibbon.setAttribute("aria-label", originLabel);
       }
     }
+  }
+
+  private updateSyncStatus(status: SyncStatusType) {
+    this.syncStatus = status;
+    this.updateStatusBar();
   }
 
   private async createTrashIfDoesNotExist() {
@@ -349,18 +353,6 @@ export default class RemotelySavePlugin extends Plugin {
     return originLabel;
   }
 
-  private updateLastSyncTime() {
-    this.settings.lastSuccessSync = Date.now();
-    this.saveSettings();
-
-    this.updateLastSuccessSyncMsg(this.settings.lastSuccessSync);
-
-    if (this.syncRibbon !== undefined) {
-      setIcon(this.syncRibbon, iconNameSyncWait);
-      this.syncRibbon.setAttribute("aria-label", this.getOriginLabel());
-    }
-  }
-
   private async doActualSync(client: RemoteClient, plan: SyncPlanType, sortedKeys: string[], metadataFile: FileOrFolderMixedState, origMetadataOnRemote: MetadataOnRemote, sizesGoWrong: FileOrFolderMixedState[], deletions: DeletionOnRemote[], self: this) {
     await doActualSync(
       client,
@@ -385,8 +377,7 @@ export default class RemotelySavePlugin extends Plugin {
           this.settings.password !== ""
         ).open();
       },
-      (i: number, totalCount: number) =>
-        self.setCurrSyncMsg(i, totalCount)
+      (i: number, total: number) => self.updateStatusBar({i, total})
     );
   }
 
@@ -527,7 +518,7 @@ export default class RemotelySavePlugin extends Plugin {
     // must AFTER preparing DB
     this.enableAutoClearSyncPlanHist();
 
-    this.syncStatus = "idle";
+    this.updateSyncStatus("idle");
 
     this.registerEvent(
       this.app.vault.on("delete", async (fileOrFolder) => {
@@ -748,11 +739,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.statusBarElement = statusBarItem.createEl("span");
       this.statusBarElement.setAttribute("aria-label-position", "top");
 
-      this.updateLastSuccessSyncMsg(this.settings.lastSuccessSync);
-      // update statusbar text every 30 seconds
-      this.registerInterval(window.setInterval(() => {
-        this.updateLastSuccessSyncMsg(this.settings.lastSuccessSync);
-      }, 1000 * 30));
+      this.updateStatusBar();
     }
 
     this.addCommand({
@@ -822,19 +809,7 @@ export default class RemotelySavePlugin extends Plugin {
         id: "get-sync-status",
         name: t("command_syncstatus"),
         icon: iconNameStatusBar,
-        callback: async () => {
-          if (this.syncStatus === "idle") {
-            new Notice(getLastSynced(this.i18n, this.settings.lastSuccessSync).lastSyncMsg);
-          } else if (this.syncStatus === "syncing") {
-            if (this.syncingStatusText !== undefined) {
-              new Notice(this.syncingStatusText);
-            } else {
-              new Notice(t("syncrun_status_preparing"));
-            }
-          } else {
-            new Notice(t("syncrun_status_preparing"));
-          }
-        },
+        callback: () => new Notice(this.syncStatusText)
       });
     }
 
@@ -1193,35 +1168,43 @@ export default class RemotelySavePlugin extends Plugin {
     await this.saveSettings();
   }
 
-  async setCurrSyncMsg(
-    i: number,
-    totalCount: number
-  ) {
-    const text = this.i18n.t("syncrun_status_progress", {
-      current: i.toString(),
-      total: totalCount.toString()
-    });
-
-    this.syncingStatusText = text;
-
-    this.updateStatusBarText(text);
-  }
-
-  updateStatusBarText(statusText: string) {
+  updateStatusBar(syncQueue?: {i: number, total: number}) {
     if (this.statusBarElement === undefined) return;
-    if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
-      this.statusBarElement.setText(statusText);
+    
+    if (this.syncRibbon !== undefined) {
+      setIcon(this.syncRibbon, iconNameSyncWait);
+      this.syncRibbon.setAttribute("aria-label", this.getOriginLabel());
     }
-  }
 
-  // TODO: Refactor this into misc.ts or elsewhere
-  updateLastSuccessSyncMsg(lastSuccessSyncMillis?: number) {
-    if (this.statusBarElement === undefined) return;
+    if (this.syncStatus === "idle") {
+      const lastSynced = getLastSynced(this.i18n, this.settings.lastSynced);
 
-    const lastSynced = getLastSynced(this.i18n, lastSuccessSyncMillis);
+      // Update ribbon
+      // if (this.syncRibbon !== undefined) {
+      //   setIcon(this.syncRibbon, iconNameSyncWait);
+      //   this.syncRibbon.setAttribute("aria-label", this.getOriginLabel());
+      // }
 
-    this.statusBarElement.setText(lastSynced.lastSyncMsg);
-    this.statusBarElement.setAttribute("aria-label", lastSynced.lastSyncLabelMsg);
+      this.syncStatusText = lastSynced.lastSyncMsg;
+      this.statusBarElement.setAttribute("aria-label", lastSynced.lastSyncLabelMsg);
+    } 
+    
+    if (this.syncStatus === "preparing") {
+      this.syncStatusText === this.i18n.t("syncrun_status_preparing");
+    }
+
+    if (this.syncStatus === "syncing") {
+      if (syncQueue !== undefined) {
+        this.syncStatusText = this.i18n.t("syncrun_status_progress", {
+          current: syncQueue.i.toString(),
+          total: syncQueue.total.toString()
+        });  
+      }
+    }
+
+    if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
+      this.statusBarElement.setText(this.syncStatusText);
+    }
   }
 
   /**
