@@ -315,11 +315,6 @@ export default class RemotelySavePlugin extends Plugin {
     }
   }
 
-  private updateSyncStatus(status: SyncStatusType) {
-    this.syncStatus = status;
-    this.updateStatusBar();
-  }
-
   private async createTrashIfDoesNotExist() {
     if (this.settings.syncTrash) {
       // when syncing to a device which never trashed a file we will error if this folder does not exist
@@ -434,6 +429,11 @@ export default class RemotelySavePlugin extends Plugin {
       () => self.saveSettings()
     );
     return client;
+  }
+
+  private updateSyncStatus(status: SyncStatusType) {
+    this.syncStatus = status;
+    this.updateStatusBar();
   }
 
   private setSyncIcon(running: boolean, triggerSource?: "manual" | "auto" | "dry" | "autoOnceInit") {
