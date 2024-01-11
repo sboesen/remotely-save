@@ -181,12 +181,8 @@ export default class RemotelySavePlugin extends Plugin {
       return;
     }
 
-    let originLabel = this.getOriginLabel();
-
     try {
-      if (this.syncRibbon !== undefined) {
-        this.setSyncIconRunning(t, triggerSource);
-      }
+      this.setSyncIcon(true, triggerSource);
 
       // Step count will be wrong for dry mode, but that's fine. It already was off by 1
       if (triggerSource === "dry") {
@@ -296,6 +292,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.saveSettings();
 
       this.updateSyncStatus("idle");
+      this.setSyncIcon(false);
     } catch (error) {
       const msg = t("syncrun_abort", {
         manifestID: this.manifest.id,
@@ -314,10 +311,7 @@ export default class RemotelySavePlugin extends Plugin {
         getNotice(error.message, -1, 10 * 1000);
       }
       this.updateSyncStatus("idle");
-      if (this.syncRibbon !== undefined) {
-        setIcon(this.syncRibbon, iconNameSyncWait);
-        this.syncRibbon.setAttribute("aria-label", originLabel);
-      }
+      this.setSyncIcon(false);
     }
   }
 
@@ -344,14 +338,6 @@ export default class RemotelySavePlugin extends Plugin {
     }
     return false;
   };
-
-  private getOriginLabel() {
-    let originLabel = `${this.manifest.name}`;
-    if (this.syncRibbon !== undefined) {
-      originLabel = this.syncRibbon.getAttribute("aria-label");
-    }
-    return originLabel;
-  }
 
   private async doActualSync(client: RemoteClient, plan: SyncPlanType, sortedKeys: string[], metadataFile: FileOrFolderMixedState, origMetadataOnRemote: MetadataOnRemote, sizesGoWrong: FileOrFolderMixedState[], deletions: DeletionOnRemote[], self: this) {
     await doActualSync(
@@ -450,15 +436,26 @@ export default class RemotelySavePlugin extends Plugin {
     return client;
   }
 
-  private setSyncIconRunning(t: (x: TransItemType, vars?: any) => string, triggerSource: "manual" | "auto" | "dry" | "autoOnceInit") {
-    setIcon(this.syncRibbon, iconNameSyncRunning);
-    this.syncRibbon.setAttribute(
-      "aria-label",
-      t("syncrun_syncingribbon", {
-        pluginName: this.manifest.name,
-        triggerSource: triggerSource,
-      })
-    );
+  private setSyncIcon(running: boolean, triggerSource?: "manual" | "auto" | "dry" | "autoOnceInit") {
+    if (this.syncRibbon === undefined) {
+      return;
+    }
+
+    if (running) {
+      setIcon(this.syncRibbon, iconNameSyncRunning);
+
+      this.syncRibbon.setAttribute(
+        "aria-label",
+        this.i18n.t("syncrun_syncingribbon", {
+          pluginName: this.manifest.name,
+          triggerSource: triggerSource,
+        })
+      );
+    } else {
+      setIcon(this.syncRibbon, iconNameSyncWait);
+      
+      this.syncRibbon.setAttribute("aria-label", this.manifest.name);
+    }
   }
 
   async onload() {
@@ -1170,21 +1167,9 @@ export default class RemotelySavePlugin extends Plugin {
 
   updateStatusBar(syncQueue?: {i: number, total: number}) {
     if (this.statusBarElement === undefined) return;
-    
-    if (this.syncRibbon !== undefined) {
-      setIcon(this.syncRibbon, iconNameSyncWait);
-      this.syncRibbon.setAttribute("aria-label", this.getOriginLabel());
-    }
 
     if (this.syncStatus === "idle") {
       const lastSynced = getLastSynced(this.i18n, this.settings.lastSynced);
-
-      // Update ribbon
-      // if (this.syncRibbon !== undefined) {
-      //   setIcon(this.syncRibbon, iconNameSyncWait);
-      //   this.syncRibbon.setAttribute("aria-label", this.getOriginLabel());
-      // }
-
       this.syncStatusText = lastSynced.lastSyncMsg;
       this.statusBarElement.setAttribute("aria-label", lastSynced.lastSyncLabelMsg);
     } 
