@@ -12,7 +12,7 @@ import type {
   SyncTriggerSourceType,
   DecisionType,
   FileOrFolderMixedState,
-  SUPPORTED_SERVICES_TYPE,
+  SUPPORTED_SERVICES_TYPE, RemotelySavePluginSettings,
 } from "./baseTypes";
 import { API_VER_STAT_FOLDER } from "./baseTypes";
 import {
@@ -283,9 +283,7 @@ const ensembleMixedStates = async (
   localConfigDirContents: ObsConfigDirFileType[] | undefined,
   remoteDeleteHistory: DeletionOnRemote[],
   localFileHistory: FileFolderHistoryRecord[],
-  syncConfigDir: boolean,
-  syncTrashDir: boolean,
-  syncBookmarks: boolean,
+  settings: RemotelySavePluginSettings,
   configDir: string,
   syncUnderscoreItems: boolean,
   password: string
@@ -295,7 +293,7 @@ const ensembleMixedStates = async (
   for (const r of remoteStates) {
     const key = r.key;
 
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, syncTrashDir, syncBookmarks, configDir)) {
+    if (isSkipItem(key, settings.syncConfigDir, syncUnderscoreItems, settings.syncTrash, settings.syncBookmarks, configDir)) {
       continue;
     }
     results[key] = r;
@@ -334,7 +332,7 @@ const ensembleMixedStates = async (
       throw Error(`unexpected ${entry}`);
     }
 
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, syncTrashDir, syncBookmarks, configDir)) {
+    if (isSkipItem(key, settings.syncConfigDir, syncUnderscoreItems, settings.syncTrash, settings.syncBookmarks, configDir)) {
       continue;
     }
 
@@ -355,7 +353,7 @@ const ensembleMixedStates = async (
     for (const entry of localConfigDirContents) {
       const key = entry.key;
       // If we're not syncing the config dir and it isn't the bookmark file, skip.
-      if (!syncConfigDir && key != configDir + FILE_NAME_FOR_BOOKMARK_FILE) {
+      if (!settings.syncConfigDir && key != configDir + FILE_NAME_FOR_BOOKMARK_FILE) {
         continue;
       }
       let mtimeLocal = Math.max(entry.mtime ?? 0, entry.ctime ?? 0);
@@ -394,7 +392,7 @@ const ensembleMixedStates = async (
       deltimeRemoteFmt: unixTimeToStr(entry.actionWhen),
     } as FileOrFolderMixedState;
 
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, syncTrashDir, syncBookmarks, configDir)) {
+    if (isSkipItem(key, settings.syncConfigDir, syncUnderscoreItems, settings.syncTrash, settings.syncBookmarks, configDir)) {
       continue;
     }
 
@@ -422,7 +420,7 @@ const ensembleMixedStates = async (
       throw Error(`unexpected ${entry}`);
     }
 
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, syncTrashDir, syncBookmarks, configDir)) {
+    if (isSkipItem(key, settings.syncConfigDir, syncUnderscoreItems, settings.syncTrash, settings.syncBookmarks, configDir)) {
       continue;
     }
 
@@ -486,7 +484,8 @@ const assignOperationToFileInplace = (
   keptFolder: Set<string>,
   remoteFiles: FileOnRemote[],
   skipSizeLargerThan: number,
-  password: string = ""
+  password: string = "",
+  checkFileHashes: boolean
 ) => {
   let r = origRecord;
 
@@ -595,6 +594,7 @@ const assignOperationToFileInplace = (
         // and the remote not existing or smaller mtime
 
         // TODO: Check file hash against hashes on remote
+        if r.
 
         if (skipSizeLargerThan <= 0) {
           // no need to consider sizes
@@ -945,9 +945,7 @@ export const getSyncPlan = async (
   remoteType: SUPPORTED_SERVICES_TYPE,
   triggerSource: SyncTriggerSourceType,
   vault: Vault,
-  syncConfigDir: boolean,
-  syncTrashDir: boolean,
-  syncBookmarks: boolean,
+  settings: RemotelySavePluginSettings,
   configDir: string,
   syncUnderscoreItems: boolean,
   skipSizeLargerThan: number,
@@ -961,9 +959,7 @@ export const getSyncPlan = async (
     localConfigDirContents,
     remoteDeleteHistory,
     localFileHistory,
-    syncConfigDir,
-    syncTrashDir,
-    syncBookmarks,
+    settings,
     configDir,
     syncUnderscoreItems,
     password
@@ -994,7 +990,8 @@ export const getSyncPlan = async (
         keptFolder,
         remoteFiles,
         skipSizeLargerThan,
-        password
+        password,
+        settings.checkFileHashes
       );
     }
 
@@ -1052,6 +1049,7 @@ export const uploadExtraMeta = async (
   metadataFile: FileOrFolderMixedState | undefined,
   origMetadata: MetadataOnRemote | undefined,
   deletions: DeletionOnRemote[],
+  filesOnRemote: FileOnRemote[],
   password: string = ""
 ) => {
 
@@ -1072,6 +1070,7 @@ export const uploadExtraMeta = async (
 
   const newMetadata: MetadataOnRemote = {
     deletions: deletions,
+    filesOnRemote: filesOnRemote,
   };
 
   // TODO: optimize and/or refactor this. Inefficient until user deletes a file
@@ -1465,6 +1464,7 @@ export const doActualSync = async (
           metadataFile,
           origMetadata,
           deletions,
+          filesOnRemote,
           password
         );
         log.debug(`finish syncing extra data`);

@@ -56,21 +56,6 @@ export const isEqualMetadataOnRemote = (
 };
 
 export const serializeMetadataOnRemote = (x: MetadataOnRemote) => {
-  const y = x;
-
-  if (y["version"] === undefined) {
-    y["version"] === DEFAULT_VERSION_FOR_METADATAONREMOTE;
-  }
-  if (y["generatedWhen"] === undefined) {
-    y["generatedWhen"] = Date.now();
-  }
-  if (y["deletions"] === undefined) {
-    y["deletions"] = [];
-  }
-  if (y["filesOnRemote"] === undefined) {
-    y["filesOnRemote"] = [];
-  }
-
   const z = {
     readme: DEFAULT_README_FOR_METADATAONREMOTE,
     d: reverseString(

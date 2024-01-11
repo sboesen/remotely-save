@@ -94,6 +94,8 @@ export interface RemotelySavePluginSettings {
   trashLocal: boolean;
   syncTrash: boolean;
   syncBookmarks: boolean;
+  checkFileHashes: boolean;
+
 
   /**
    * @deprecated

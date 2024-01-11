@@ -92,6 +92,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   trashLocal: false,
   syncTrash: false,
   syncBookmarks: true,
+  checkFileHashes: false
 };
 
 interface OAuth2Info {
@@ -396,9 +397,7 @@ export default class RemotelySavePlugin extends Plugin {
       client.serviceType,
       triggerSource,
       this.app.vault,
-      this.settings.syncConfigDir,
-      this.settings.syncTrash,
-      this.settings.syncBookmarks,
+      this.settings,
       this.app.vault.configDir,
       this.settings.syncUnderscoreItems,
       this.settings.skipSizeLargerThan,
