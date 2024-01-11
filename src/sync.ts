@@ -1407,7 +1407,7 @@ export const doActualSync = async (
 
       queue.on('next', async () => {
         if (callbackSyncProcess !== undefined) {
-          const unsyncedItems = queue.size + queue.pending;
+          const unsyncedItems = queueSize - (queue.size + queue.pending);
           await callbackSyncProcess(unsyncedItems, queueSize);
         }
       });
