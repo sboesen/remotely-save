@@ -458,6 +458,36 @@ export default class RemotelySavePlugin extends Plugin {
     }
   }
 
+  private updateStatusBar(syncQueue?: {i: number, total: number}) {
+    if (this.statusBarElement === undefined) return;
+
+    if (this.syncStatus === "idle") {
+      const lastSynced = getLastSynced(this.i18n, this.settings.lastSynced);
+      this.syncStatusText = lastSynced.lastSyncMsg;
+      this.statusBarElement.setAttribute("aria-label", lastSynced.lastSyncLabelMsg);
+    } 
+    
+    if (this.syncStatus === "preparing") {
+      this.syncStatusText = this.i18n.t("syncrun_status_preparing");
+    }
+
+    if (this.syncStatus === "syncing") {
+      if (syncQueue !== undefined) {
+        this.syncStatusText = this.i18n.t("syncrun_status_progress", {
+          current: syncQueue.i.toString(),
+          total: syncQueue.total.toString()
+        });  
+      } else {
+        this.syncStatusText = "Syncing";
+        //this.i18n.t("syncrun_status_syncing");
+      }
+    }
+    
+    if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
+      this.statusBarElement.setText(this.syncStatusText);
+    }
+  }
+
   async onload() {
     this.oauth2Info = {
       verifier: "",
@@ -1163,33 +1193,6 @@ export default class RemotelySavePlugin extends Plugin {
   async saveAgreeToUseNewSyncAlgorithm() {
     this.settings.agreeToUploadExtraMetadata = true;
     await this.saveSettings();
-  }
-
-  updateStatusBar(syncQueue?: {i: number, total: number}) {
-    if (this.statusBarElement === undefined) return;
-
-    if (this.syncStatus === "idle") {
-      const lastSynced = getLastSynced(this.i18n, this.settings.lastSynced);
-      this.syncStatusText = lastSynced.lastSyncMsg;
-      this.statusBarElement.setAttribute("aria-label", lastSynced.lastSyncLabelMsg);
-    } 
-    
-    if (this.syncStatus === "preparing") {
-      this.syncStatusText === this.i18n.t("syncrun_status_preparing");
-    }
-
-    if (this.syncStatus === "syncing") {
-      if (syncQueue !== undefined) {
-        this.syncStatusText = this.i18n.t("syncrun_status_progress", {
-          current: syncQueue.i.toString(),
-          total: syncQueue.total.toString()
-        });  
-      }
-    }
-
-    if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
-      this.statusBarElement.setText(this.syncStatusText);
-    }
   }
 
   /**
