@@ -478,8 +478,7 @@ export default class RemotelySavePlugin extends Plugin {
           total: syncQueue.total.toString()
         });  
       } else {
-        this.syncStatusText = "Syncing";
-        //this.i18n.t("syncrun_status_syncing");
+        this.syncStatusText = this.i18n.t("syncrun_status_syncing");
       }
     }
 
