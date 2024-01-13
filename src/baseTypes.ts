@@ -90,7 +90,7 @@ export interface RemotelySavePluginSettings {
   logToDB?: boolean;
   skipSizeLargerThan?: number;
   enableStatusBarInfo: boolean;
-  lastSuccessSync?: number;
+  lastSynced?: number;
   trashLocal: boolean;
   syncTrash: boolean;
   syncBookmarks: boolean;

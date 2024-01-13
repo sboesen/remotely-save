@@ -200,7 +200,7 @@ class ChangeRemoteBaseDirModal extends Modal {
           button.onClick(async () => {
             this.plugin.settings[this.service].remoteBaseDir =
               this.newRemoteBaseDir;
-            this.plugin.settings.lastSuccessSync = -1;
+            this.plugin.settings.lastSynced = -1;
             await this.plugin.saveSettings();
             new Notice(t("modal_remotebasedir_notice"));
             this.close();
