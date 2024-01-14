@@ -1687,7 +1687,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             .onChange(async (val) => {
               this.plugin.settings.enableStatusBarInfo = val;
               await this.plugin.saveSettings();
-              new Notice(t("settings_enablestatusbar_reloadrequired_notice"));
+              this.plugin.toggleStatusBar(val);
             });
         });
     }

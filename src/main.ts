@@ -118,7 +118,8 @@ export default class RemotelySavePlugin extends Plugin {
   syncRibbon?: HTMLElement;
   autoRunIntervalID?: number;
   syncOnSaveIntervalID?: number;
-  syncOnRemoteIntervalID?: any;
+  syncOnRemoteIntervalID?: number;
+  statusBarIntervalID: number;
   i18n: I18n;
   vaultRandomID: string;
   isManual: boolean;
@@ -459,12 +460,18 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   private updateStatusBar(syncQueue?: {i: number, total: number}) {
-    if (this.statusBarElement === undefined) return;
+    const enabled = this.statusBarElement !== undefined && 
+      this.settings.enableStatusBarInfo === true && 
+      !Platform.isMobileApp;
 
+    // Update status text
     if (this.syncStatus === "idle") {
       const lastSynced = getLastSynced(this.i18n, this.settings.lastSynced);
       this.syncStatusText = lastSynced.lastSyncMsg;
-      this.statusBarElement.setAttribute("aria-label", lastSynced.lastSyncLabelMsg);
+
+      if (enabled) {
+        this.statusBarElement.setAttribute("aria-label", lastSynced.lastSyncLabelMsg);
+      }
     } 
     
     if (this.syncStatus === "preparing") {
@@ -482,7 +489,7 @@ export default class RemotelySavePlugin extends Plugin {
       }
     }
 
-    if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
+    if (enabled) {
       this.statusBarElement.setText(this.syncStatusText);
     }
   }
@@ -760,14 +767,6 @@ export default class RemotelySavePlugin extends Plugin {
       async () => this.syncRun("manual")
     );
 
-    if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
-      const statusBarItem = this.addStatusBarItem();
-      this.statusBarElement = statusBarItem.createEl("span");
-      this.statusBarElement.setAttribute("data-tooltip-position", "top");
-
-      this.updateStatusBar();
-    }
-
     this.addCommand({
       id: "start-sync",
       name: t("command_startsync"),
@@ -830,15 +829,13 @@ export default class RemotelySavePlugin extends Plugin {
       },
     });
 
-    if (Platform.isDesktop === false) {
-      this.addCommand({
-        id: "get-sync-status",
-        name: t("command_syncstatus"),
-        icon: iconNameStatusBar,
-        callback: () => new Notice(this.syncStatusText)
-      });
-    }
-
+    this.addCommand({
+      id: "get-sync-status",
+      name: t("command_syncstatus"),
+      icon: iconNameStatusBar,
+      callback: () => new Notice(this.syncStatusText)
+    });
+    
     this.addSettingTab(new RemotelySaveSettingTab(this.app, this));
 
     // this.registerDomEvent(document, "click", (evt: MouseEvent) => {
@@ -853,6 +850,8 @@ export default class RemotelySavePlugin extends Plugin {
       this.enableInitSyncIfSet();
       this.enableSyncOnSaveIfSet();
       this.toggleSyncOnRemote(true);
+      this.toggleStatusBar(true);
+      this.toggleStatusText(true);
     }
   }
 
@@ -865,6 +864,8 @@ export default class RemotelySavePlugin extends Plugin {
     
     // Clear intervals
     this.toggleSyncOnRemote(false);
+    this.toggleStatusText(false);
+    this.toggleStatusBar(false);
   }
 
   async loadSettings() {
@@ -1093,6 +1094,40 @@ export default class RemotelySavePlugin extends Plugin {
     }
   }
 
+  // Needed to update text for get command
+  toggleStatusText(enabled: boolean) {
+    // Remove interval
+    if (this.statusBarIntervalID !== undefined) {
+      window.clearInterval(this.statusBarIntervalID);
+      this.statusBarIntervalID = undefined;
+    }
+
+    // Set up interval
+    if (enabled) {
+      const interval = window.setInterval(async () => {
+        if (this.syncStatus === "syncing") {
+          return;
+        }
+        console.log(interval);
+        this.updateStatusBar();
+      }, 5_000);
+
+      this.statusBarIntervalID = interval; 
+    }
+  }
+
+  toggleStatusBar(enabled: boolean) {  
+    if (enabled && !Platform.isMobileApp && this.settings.enableStatusBarInfo) {
+      const statusBarItem = this.addStatusBarItem();
+      this.statusBarElement = statusBarItem.createEl("span");
+      this.statusBarElement.setAttribute("data-tooltip-position", "top");  
+    } else {
+      this.statusBarElement?.remove();
+    }
+
+    this.updateStatusBar();
+  }
+
   toggleSyncOnRemote(enabled: boolean) {
     // Clears the current interval
     if (this.syncOnRemoteIntervalID !== undefined) {
@@ -1104,9 +1139,9 @@ export default class RemotelySavePlugin extends Plugin {
       return;
     }
 
-    const interval = window.setInterval(async () => {
+    this.syncOnRemoteIntervalID = window.setInterval(async () => {
       // Tries to prevent it from running multiple setIntervals
-      if (this.syncStatus !== "idle" || this.syncOnRemoteIntervalID !== interval) {
+      if (this.syncStatus !== "idle") {
         return;
       }
 
@@ -1121,8 +1156,6 @@ export default class RemotelySavePlugin extends Plugin {
         this.syncRun("auto");
       }
     }, this.settings.syncOnRemoteChangesAfterMilliseconds);
-
-    this.syncOnRemoteIntervalID = interval;
   }
   
   async getMetadataMtime() {
