@@ -1108,7 +1108,7 @@ export default class RemotelySavePlugin extends Plugin {
         if (this.syncStatus !== "syncing") {
           this.updateStatusBar();
         }
-      }, 60_000);
+      }, 30_000);
 
       this.updateStatusBar();
     }
