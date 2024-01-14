@@ -1096,7 +1096,7 @@ export default class RemotelySavePlugin extends Plugin {
 
   // Needed to update text for get command
   toggleStatusText(enabled: boolean) {
-    // Remove interval
+    // Clears the current interval
     if (this.statusBarIntervalID !== undefined) {
       window.clearInterval(this.statusBarIntervalID);
       this.statusBarIntervalID = undefined;
@@ -1104,15 +1104,13 @@ export default class RemotelySavePlugin extends Plugin {
 
     // Set up interval
     if (enabled) {
-      const interval = window.setInterval(async () => {
-        if (this.syncStatus === "syncing") {
-          return;
+      this.statusBarIntervalID = window.setInterval(async () => {
+        if (this.syncStatus !== "syncing") {
+          this.updateStatusBar();
         }
-        console.log(interval);
-        this.updateStatusBar();
-      }, 5_000);
+      }, 60_000);
 
-      this.statusBarIntervalID = interval; 
+      this.updateStatusBar();
     }
   }
 
@@ -1140,7 +1138,6 @@ export default class RemotelySavePlugin extends Plugin {
     }
 
     this.syncOnRemoteIntervalID = window.setInterval(async () => {
-      // Tries to prevent it from running multiple setIntervals
       if (this.syncStatus !== "idle") {
         return;
       }
