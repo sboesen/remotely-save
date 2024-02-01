@@ -349,6 +349,7 @@ export default class RemotelySavePlugin extends Plugin {
       deletions,
       (key: string) => self.trash(key),
       this.settings.password,
+      this.settings.lastSynced,
       this.settings.concurrency,
       (ss: FileOrFolderMixedState[]) => {
         new SizesConflictModal(

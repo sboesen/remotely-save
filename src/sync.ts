@@ -1353,6 +1353,7 @@ export const doActualSync = async (
   deletions: DeletionOnRemote[],
   localDeleteFunc: any,
   password: string = "",
+  lastSynced?: number,
   concurrency: number = 1,
   callbackSizesGoWrong?: any,
   callbackSyncProcess?: any
@@ -1404,6 +1405,15 @@ export const doActualSync = async (
 
         if (isDeleteOp === false) {
           queueTotal++;
+        }
+        // Filter auto-created items from first sync if exist on remote
+        if (lastSynced == undefined) {
+          const skipKeys = ["app.json", "appearance.json", "core-plugins-migration.json", "core-plugins.json", "graph.json", "workspace.json"];
+          if (val.existRemote && skipKeys.includes(key)) {
+            log.debug("downloading from remote fot first sync: ", key);
+            val.decision = "downloadRemoteToLocal";
+          }
+
         }
 
         const syncCall = queue.add(async () => await syncIndividualItem(key, isDeleteOp, val, vaultRandomID, client, db, vault, localDeleteFunc, password));
