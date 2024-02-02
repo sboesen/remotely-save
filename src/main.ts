@@ -66,7 +66,6 @@ import {
 } from "./debugMode";
 import { SizesConflictModal } from "./syncSizesConflictNotice";
 import {mkdirpInVault, getLastSynced} from "./misc";
-import { platform } from "os";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
