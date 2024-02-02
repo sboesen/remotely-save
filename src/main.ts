@@ -66,6 +66,7 @@ import {
 } from "./debugMode";
 import { SizesConflictModal } from "./syncSizesConflictNotice";
 import {mkdirpInVault, getLastSynced} from "./misc";
+import { platform } from "os";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
@@ -1127,7 +1128,7 @@ export default class RemotelySavePlugin extends Plugin {
     this.updateStatusBar();
   }
 
-  toggleSyncOnRemote(enabled: boolean) {
+  async toggleSyncOnRemote(enabled: boolean) {
     // Clears the current interval
     if (this.syncOnRemoteIntervalID !== undefined) {
       window.clearInterval(this.syncOnRemoteIntervalID);
@@ -1138,7 +1139,7 @@ export default class RemotelySavePlugin extends Plugin {
       return;
     }
 
-    this.syncOnRemoteIntervalID = window.setInterval(async () => {
+    const syncOnRemote = async () => {
       if (this.syncStatus !== "idle") {
         return;
       }
@@ -1146,14 +1147,22 @@ export default class RemotelySavePlugin extends Plugin {
       const metadataMtime = await this.getMetadataMtime();
 
       if (metadataMtime === undefined) {
-        return;
+        return false;
       }
 
       if (metadataMtime !== this.settings.lastSynced) {
         log.debug("Sync on Remote ran | Remote Metadata:", metadataMtime + ", Last Synced:", this.settings.lastSynced);
         this.syncRun("auto");
+        return true;
       }
-    }, this.settings.syncOnRemoteChangesAfterMilliseconds);
+    };
+
+    if (Platform.isMobileApp) {
+      const onLoadResult = await syncOnRemote();
+      new Notice(onLoadResult === true ? this.i18n.t("remote_changes_found") : this.i18n.t("remote_changes_synced"));
+    }
+
+    this.syncOnRemoteIntervalID = window.setInterval(syncOnRemote, this.settings.syncOnRemoteChangesAfterMilliseconds);
   }
   
   async getMetadataMtime() {
