@@ -138,11 +138,13 @@ export default class RemotelySavePlugin extends Plugin {
     const getNotice = (x: string, step: number, timeout?: number) => {
       // only show notices in manual mode no notice in auto mode
       if (this.isManual || triggerSource === "manual" || triggerSource === "dry") {
-        // Display Mobile Notices
+        // Display mobile or desktop without status bar notices
         if (!this.settings.debugEnabled) {
-          if (Platform.isMobile) {
+          if (Platform.isMobile || !this.settings.enableStatusBarInfo) {
             if (step == 1) {
-              new Notice("1/" + this.i18n.t("syncrun_step8", {maxSteps: "2"}), timeout);
+              new Notice("1/" + this.i18n.t("syncrun_step1", {
+                maxSteps: "2", serviceType: this.settings.serviceType
+              }), timeout);
             } else if (step == 8) {
               new Notice("2/" + this.i18n.t("syncrun_step8", {maxSteps: "2"}), timeout);
             }
@@ -162,10 +164,9 @@ export default class RemotelySavePlugin extends Plugin {
       if (triggerSource == "manual") {
         // Show notice for debug, mobile, or desktop
         if (this.settings.debugEnabled) {
-          new Notice(t("syncrun_debug_alreadyrunning", { stage: this.syncStatus}));
+          new Notice(t("syncrun_debug_alreadyrunning", {stage: this.syncStatus}));
         } else {
-          new Notice(Platform.isMobile ? 
-            t("syncrun_mobile_alreadyrunning") : t("syncrun_desktop_alreadyrunning"));
+          new Notice(t("syncrun_alreadyrunning"));
         }
 
         log.debug(this.manifest.name, " already running in stage: ", this.syncStatus);
