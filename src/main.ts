@@ -136,24 +136,22 @@ export default class RemotelySavePlugin extends Plugin {
     };
 
     const getNotice = (x: string, step: number, timeout?: number) => {
-      // only show notices in manual mode
-      // no notice in auto mode
+      // only show notices in manual mode no notice in auto mode
       if (this.isManual || triggerSource === "manual" || triggerSource === "dry") {
+        // Display Mobile Notices
         if (!this.settings.debugEnabled) {
-          // If not mobile and status bar enabled, return.
-          if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
-            return;
+          if (Platform.isMobile) {
+            if (step == 1) {
+              new Notice("1/" + this.i18n.t("syncrun_step8", {maxSteps: "2"}), timeout);
+            } else if (step == 8) {
+              new Notice("2/" + this.i18n.t("syncrun_step8", {maxSteps: "2"}), timeout);
+            }
           }
 
-          // Rewrite step 8 to display as step 2
-          if (step == 8) {
-            step = 2;
-          } else if (step > 1 && step < 8) {
-            // Allow all errors ("step -1"). Otherwise skip steps 2 -> 7
-            return;
-          }
+          return;
         }
-        // Add "step/x" in notice
+
+        // Display debug notices
         const prefix = step > -1 ? step + "/" : "";
         new Notice(prefix + x, timeout);
       }
@@ -162,16 +160,13 @@ export default class RemotelySavePlugin extends Plugin {
     // Make sure two syncs can't run at the same time
     if (this.syncStatus !== "idle") {
       if (triggerSource == "manual") {
-        new Notice(
-          "1/" + t("syncrun_alreadyrunning", {
-            maxSteps: `${MAX_STEPS}`,
-            pluginName: this.manifest.name,
-            syncStatus: this.syncStatus,
-          })
-        );
-
-        // If already running, report finished status as user tried to manually sync
-        this.isManual = true;
+        // Show notice for debug, mobile, or desktop
+        if (this.settings.debugEnabled) {
+          new Notice(t("syncrun_debug_alreadyrunning", { stage: this.syncStatus}));
+        } else {
+          new Notice(Platform.isMobile ? 
+            t("syncrun_mobile_alreadyrunning") : t("syncrun_desktop_alreadyrunning"));
+        }
 
         log.debug(this.manifest.name, " already running in stage: ", this.syncStatus);
 
@@ -179,7 +174,7 @@ export default class RemotelySavePlugin extends Plugin {
           log.debug(this.currSyncMsg);
         }  
       }
-      
+
       return;
     }
 
