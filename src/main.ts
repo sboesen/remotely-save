@@ -123,10 +123,12 @@ export default class RemotelySavePlugin extends Plugin {
   i18n: I18n;
   vaultRandomID: string;
   isManual: boolean;
+  isAlreadyRunning: boolean;
   vaultScannerIntervalId?: number;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
-    this.isManual = triggerSource == "manual";
+    this.isManual = triggerSource === "manual";
+    this.isAlreadyRunning = false;
     const MAX_STEPS = this.settings.debugEnabled ? 8 : 2;
     await this.createTrashIfDoesNotExist();
 
@@ -135,20 +137,19 @@ export default class RemotelySavePlugin extends Plugin {
     };
 
     const getNotice = (x: string, step: number, timeout?: number) => {
-      // only show notices in manual mode no notice in auto mode
       if (this.isManual || triggerSource === "manual" || triggerSource === "dry") {
-        // Display mobile or desktop without status bar notices
+        // Display mobile or desktop without status bar notices or if already running notice appears
         if (!this.settings.debugEnabled) {
-          if (Platform.isMobile || !this.settings.enableStatusBarInfo) {
-            if (step == 1) {
+          if (this.isAlreadyRunning || Platform.isMobile || !this.settings.enableStatusBarInfo) {
+            if (step === 1) {
               new Notice("1/" + this.i18n.t("syncrun_step1", {
                 maxSteps: "2", serviceType: this.settings.serviceType
               }), timeout);
-            } else if (step == 8) {
+            } else if (step === 8) {
               new Notice("2/" + this.i18n.t("syncrun_step8", {maxSteps: "2"}), timeout);
             }
           }
-
+          
           return;
         }
 
@@ -165,7 +166,8 @@ export default class RemotelySavePlugin extends Plugin {
         if (this.settings.debugEnabled) {
           new Notice(t("syncrun_debug_alreadyrunning", {stage: this.syncStatus}));
         } else {
-          new Notice(t("syncrun_alreadyrunning"));
+          new Notice("1/" + t("syncrun_alreadyrunning", {maxSteps: MAX_STEPS}));
+          this.isAlreadyRunning = true;
         }
 
         log.debug(this.manifest.name, " already running in stage: ", this.syncStatus);
