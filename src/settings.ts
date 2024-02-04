@@ -1866,6 +1866,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.onClick(async () => {
           const c = messyConfigToNormal(await this.plugin.loadData());
           new Notice(t("settings_outputsettingsconsole_notice"));
+          console.log(c);
         });
       });
 
