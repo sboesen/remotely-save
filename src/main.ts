@@ -123,10 +123,12 @@ export default class RemotelySavePlugin extends Plugin {
   i18n: I18n;
   vaultRandomID: string;
   isManual: boolean;
+  isAlreadyRunning: boolean;
   vaultScannerIntervalId?: number;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
-    this.isManual = triggerSource == "manual";
+    this.isManual = triggerSource === "manual";
+    this.isAlreadyRunning = false;
     const MAX_STEPS = this.settings.debugEnabled ? 8 : 2;
     await this.createTrashIfDoesNotExist();
 
@@ -135,24 +137,23 @@ export default class RemotelySavePlugin extends Plugin {
     };
 
     const getNotice = (x: string, step: number, timeout?: number) => {
-      // only show notices in manual mode
-      // no notice in auto mode
       if (this.isManual || triggerSource === "manual" || triggerSource === "dry") {
+        // Display mobile or desktop without status bar notices or if already running notice appears
         if (!this.settings.debugEnabled) {
-          // If not mobile and status bar enabled, return.
-          if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
-            return;
+          if (this.isAlreadyRunning || Platform.isMobile || !this.settings.enableStatusBarInfo) {
+            if (step === 1) {
+              new Notice("1/" + this.i18n.t("syncrun_step1", {
+                maxSteps: "2", serviceType: this.settings.serviceType
+              }), timeout);
+            } else if (step === 8) {
+              new Notice("2/" + this.i18n.t("syncrun_step8", {maxSteps: "2"}), timeout);
+            }
           }
-
-          // Rewrite step 8 to display as step 2
-          if (step == 8) {
-            step = 2;
-          } else if (step > 1 && step < 8) {
-            // Allow all errors ("step -1"). Otherwise skip steps 2 -> 7
-            return;
-          }
+          
+          return;
         }
-        // Add "step/x" in notice
+
+        // Display debug notices
         const prefix = step > -1 ? step + "/" : "";
         new Notice(prefix + x, timeout);
       }
@@ -161,16 +162,13 @@ export default class RemotelySavePlugin extends Plugin {
     // Make sure two syncs can't run at the same time
     if (this.syncStatus !== "idle") {
       if (triggerSource == "manual") {
-        new Notice(
-          "1/" + t("syncrun_alreadyrunning", {
-            maxSteps: `${MAX_STEPS}`,
-            pluginName: this.manifest.name,
-            syncStatus: this.syncStatus,
-          })
-        );
-
-        // If already running, report finished status as user tried to manually sync
-        this.isManual = true;
+        // Show notice for debug, mobile, or desktop
+        if (this.settings.debugEnabled) {
+          new Notice(t("syncrun_debug_alreadyrunning", {stage: this.syncStatus}));
+        } else {
+          new Notice("1/" + t("syncrun_alreadyrunning", {maxSteps: MAX_STEPS}));
+          this.isAlreadyRunning = true;
+        }
 
         log.debug(this.manifest.name, " already running in stage: ", this.syncStatus);
 
@@ -178,7 +176,7 @@ export default class RemotelySavePlugin extends Plugin {
           log.debug(this.currSyncMsg);
         }  
       }
-      
+
       return;
     }
 
@@ -1127,7 +1125,7 @@ export default class RemotelySavePlugin extends Plugin {
     this.updateStatusBar();
   }
 
-  toggleSyncOnRemote(enabled: boolean) {
+  async toggleSyncOnRemote(enabled: boolean) {
     // Clears the current interval
     if (this.syncOnRemoteIntervalID !== undefined) {
       window.clearInterval(this.syncOnRemoteIntervalID);
@@ -1138,7 +1136,7 @@ export default class RemotelySavePlugin extends Plugin {
       return;
     }
 
-    this.syncOnRemoteIntervalID = window.setInterval(async () => {
+    const syncOnRemote = async () => {
       if (this.syncStatus !== "idle") {
         return;
       }
@@ -1146,14 +1144,22 @@ export default class RemotelySavePlugin extends Plugin {
       const metadataMtime = await this.getMetadataMtime();
 
       if (metadataMtime === undefined) {
-        return;
+        return false;
       }
 
       if (metadataMtime !== this.settings.lastSynced) {
         log.debug("Sync on Remote ran | Remote Metadata:", metadataMtime + ", Last Synced:", this.settings.lastSynced);
         this.syncRun("auto");
+        return true;
       }
-    }, this.settings.syncOnRemoteChangesAfterMilliseconds);
+    };
+
+    if (Platform.isMobileApp) {
+      const onLoadResult = await syncOnRemote();
+      new Notice(onLoadResult === true ? this.i18n.t("remote_changes_found") : this.i18n.t("remote_changes_synced"));
+    }
+
+    this.syncOnRemoteIntervalID = window.setInterval(syncOnRemote, this.settings.syncOnRemoteChangesAfterMilliseconds);
   }
   
   async getMetadataMtime() {
