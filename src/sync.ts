@@ -1407,10 +1407,11 @@ export const doActualSync = async (
           queueTotal++;
         }
         // Filter auto-created items from first sync if exist on remote
+        log.debug("Checking if lastSynced is set: ", lastSynced, "== -1?: ", lastSynced == -1);
         if (lastSynced == -1) {
           const skipKeys = ["app.json", "appearance.json", "core-plugins-migration.json", "core-plugins.json", "graph.json", "workspace.json"];
           if (val.existRemote && skipKeys.includes(key)) {
-            log.debug("downloading from remote fot first sync: ", key);
+            log.debug("downloading from remote for first sync: ", key);
             val.decision = "downloadRemoteToLocal";
           }
 
