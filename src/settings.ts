@@ -1514,9 +1514,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .setDesc(t("settings_saverun_desc"))
       .addDropdown((dropdown) => {
         dropdown.addOption("-1", t("settings_saverun_notset"));
-        dropdown.addOption(`${1000 * 1}`, t("settings_saverun_1sec"));
+        dropdown.addOption("0", t("settings_saverun_instant"));
         dropdown.addOption(`${1000 * 5}`, t("settings_saverun_5sec"));
         dropdown.addOption(`${1000 * 10}`, t("settings_saverun_10sec"));
+        dropdown.addOption(`${1000 * 30}`, t("settings_saverun_30sec"));
         dropdown.addOption(`${1000 * 60}`, t("settings_saverun_1min"));
         let runScheduled = false
         dropdown
@@ -1524,47 +1525,16 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           .onChange(async (val: string) => {
             const realVal = parseInt(val);
             this.plugin.settings.syncOnSaveAfterMilliseconds = realVal;
-            await this.plugin.saveSettings();
-            if (
-              (realVal === undefined || realVal === null || realVal <= 0) &&
-              this.plugin.syncOnSaveIntervalID !== undefined
-            ) {
-              // clear
-              window.clearInterval(this.plugin.syncOnSaveIntervalID);
-              this.plugin.syncOnSaveIntervalID = undefined;
-            } else if (
-              realVal !== undefined &&
-              realVal !== null &&
-              realVal > 0
-            ) {
-              const intervalID = window.setInterval(() => {
-                const currentFile = this.app.workspace.getActiveFile();
 
-                if (currentFile) {
-                  // get the last modified time of the current file
-                  // if it has been modified within the last syncOnSaveAfterMilliseconds
-                  // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
-                  const lastModified = currentFile.stat.mtime;
-                  const currentTime = Date.now();
-                  if (currentTime - lastModified < this.plugin.settings.syncOnSaveAfterMilliseconds) {
-                    if (!runScheduled) {
-                      const scheduleTimeFromNow = this.plugin.settings.syncOnSaveAfterMilliseconds - (currentTime - lastModified)
-                      runScheduled = true
-                      setTimeout(() => {
-                        this.plugin.syncRun("auto")
-                        runScheduled = false
-                      },
-                        scheduleTimeFromNow
-                      )
-                    }
-                  }
-                }
-              }, realVal);
-              this.plugin.syncOnSaveIntervalID = intervalID;
-              this.plugin.registerInterval(intervalID);
+            await this.plugin.saveSettings();
+
+            if (realVal < 0) {
+              this.plugin.toggleSyncOnSave(false);
+            } else {
+              this.plugin.toggleSyncOnSave(true);
             }
-          });
-      });
+          })
+    });
 
     new Setting(basicDiv)
     .setName(t("settings_remoterun"))

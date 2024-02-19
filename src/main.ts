@@ -5,7 +5,7 @@ import {
   Setting,
   setIcon,
   FileSystemAdapter,
-  Platform, TAbstractFile, Vault
+  Platform, TAbstractFile, Vault, EventRef
 } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
 import type {
@@ -117,14 +117,14 @@ export default class RemotelySavePlugin extends Plugin {
   currSyncMsg?: string;
   syncRibbon?: HTMLElement;
   autoRunIntervalID?: number;
-  syncOnSaveIntervalID?: number;
-  syncOnRemoteIntervalID?: number;
-  statusBarIntervalID: number;
   i18n: I18n;
   vaultRandomID: string;
   isManual: boolean;
   isAlreadyRunning: boolean;
+  syncOnSaveEvent?: EventRef;
   vaultScannerIntervalId?: number;
+  syncOnRemoteIntervalID?: number;
+  statusBarIntervalID: number;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
     this.isManual = triggerSource === "manual";
@@ -322,7 +322,6 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   private shouldSyncBasedOnSyncPlan = async (syncPlan: SyncPlanType) => {
-
     for (const key in syncPlan.mixedStates) {
       const fileState = syncPlan.mixedStates[key];
 
@@ -847,8 +846,8 @@ export default class RemotelySavePlugin extends Plugin {
     } else {
       this.enableAutoSyncIfSet();
       this.enableInitSyncIfSet();
-      this.enableSyncOnSaveIfSet();
       this.toggleSyncOnRemote(true);
+      this.toggleSyncOnSave(true);
       this.toggleStatusBar(true);
       this.toggleStatusText(true);
     }
@@ -862,6 +861,7 @@ export default class RemotelySavePlugin extends Plugin {
     }
     
     // Clear intervals
+    this.toggleSyncOnSave(false);
     this.toggleSyncOnRemote(false);
     this.toggleStatusText(false);
     this.toggleStatusBar(false);
@@ -1038,61 +1038,6 @@ export default class RemotelySavePlugin extends Plugin {
     this.vaultRandomID = vaultRandomID;
   }
 
-  enableSyncOnSaveIfSet() {
-    if (
-      this.settings.syncOnSaveAfterMilliseconds !== undefined &&
-      this.settings.syncOnSaveAfterMilliseconds !== null &&
-      this.settings.syncOnSaveAfterMilliseconds > 0
-    ) {
-      let runScheduled = false;
-      this.app.workspace.onLayoutReady(() => {
-        const intervalIDVaultScanner = window.setInterval(async () => {
-          let plan = await this.getSyncPlan2();
-          if (await this.shouldSyncBasedOnSyncPlan(plan)) {
-            if (!runScheduled) {
-              log.debug(`schedule a run for ${this.settings.syncOnSaveAfterMilliseconds} milliseconds later`)
-              runScheduled = true
-              setTimeout(() => {
-                  this.syncRun("auto")
-                  runScheduled = false
-                },
-                this.settings.syncOnSaveAfterMilliseconds
-              )
-            }
-          }
-        }, this.settings.syncOnSaveAfterMilliseconds * 100); // More expensive scan, so lookup less frequently
-        this.vaultScannerIntervalId = intervalIDVaultScanner;
-        this.registerInterval(intervalIDVaultScanner);
-
-        const intervalIDSyncOnSave = window.setInterval(async () => {
-          const currentFile = this.app.workspace.getActiveFile();
-          if (currentFile) {
-            // get the last modified time of the current file
-            // if it has been modified within the last syncOnSaveAfterMilliseconds
-            // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
-            const lastModified = currentFile.stat.mtime;
-            const currentTime = Date.now();
-            if (currentTime - lastModified < this.settings.syncOnSaveAfterMilliseconds) {
-              if (!runScheduled) {
-                const scheduleTimeFromNow = this.settings.syncOnSaveAfterMilliseconds - (currentTime - lastModified)
-                log.debug(`schedule a run for ${scheduleTimeFromNow} milliseconds later`)
-                runScheduled = true
-                setTimeout(() => {
-                    this.syncRun("auto")
-                    runScheduled = false
-                  },
-                  scheduleTimeFromNow
-                )
-              }
-            }
-          }
-        }, 1_000);
-        this.syncOnSaveIntervalID = intervalIDSyncOnSave;
-        this.registerInterval(intervalIDSyncOnSave);
-      });
-    }
-  }
-
   // Needed to update text for get command
   toggleStatusText(enabled: boolean) {
     // Clears the current interval
@@ -1160,6 +1105,78 @@ export default class RemotelySavePlugin extends Plugin {
     }
 
     this.syncOnRemoteIntervalID = window.setInterval(syncOnRemote, this.settings.syncOnRemoteChangesAfterMilliseconds);
+  }
+
+  async toggleSyncOnSave(enabled: boolean) {
+    let alreadyScheduled = false;
+
+    // Unregister vault change event
+    if (this.syncOnSaveEvent !== undefined) {
+      this.app.vault.offref(this.syncOnSaveEvent);
+      this.syncOnSaveEvent = undefined;
+    }
+
+    // Unregister scanning for .obsidian changes
+    if (this.vaultScannerIntervalId !== undefined) {
+      window.clearInterval(this.vaultScannerIntervalId);
+      this.vaultScannerIntervalId = undefined;
+    }
+
+    if (enabled === false || this.settings.syncOnSaveAfterMilliseconds === -1) {
+      return;
+    }
+    
+    // Register vault change event
+    this.syncOnSaveEvent = this.app.vault.on("modify", () => {
+      if (this.syncStatus !== "idle" || alreadyScheduled) {
+        return;
+      }
+
+      alreadyScheduled = true;
+      log.debug(`Scheduled a sync run for ${this.settings.syncOnSaveAfterMilliseconds} milliseconds later`);
+
+      setTimeout(async () => {
+        log.debug("Sync on save ran");
+        await this.syncRun("auto");  
+        alreadyScheduled = false;
+      }, this.settings.syncOnSaveAfterMilliseconds);
+    });
+
+    // Scan vault for config directory changes
+    const scanVault = async () => {
+      if (this.syncStatus !== "idle" || alreadyScheduled || !this.settings.syncConfigDir) {
+        return;
+      }
+
+      log.debug("Scanning config directory for changes");
+
+      let localConfigContents: ObsConfigDirFileType[] = await listFilesInObsFolder(this.app.vault, this.manifest.id, this.settings.syncTrash);
+
+      for (let i = 0; i < localConfigContents.length; i++) {
+        const file = localConfigContents[i];
+
+        if (file.key.includes(".obsidian/plugins/remotely-sync/")) {
+          continue;
+        }
+
+        if (file.mtime > this.settings.lastSynced) {
+          log.debug("Unsynced config file found: ", file.key)
+          alreadyScheduled = true;
+          log.debug(`Scheduled a sync run for ${this.settings.syncOnSaveAfterMilliseconds} milliseconds later`);
+
+          setTimeout(async () => {
+            log.debug("Sync on save ran");
+            await this.syncRun("auto");  
+            alreadyScheduled = false;
+          }, this.settings.syncOnSaveAfterMilliseconds);
+
+          break;
+        }
+      }
+    }
+
+    // Scans every 60 seconds
+    this.vaultScannerIntervalId = window.setInterval(scanVault, 30_000);
   }
   
   async getMetadataMtime() {
