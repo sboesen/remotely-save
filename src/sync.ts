@@ -1389,6 +1389,8 @@ export const doActualSync = async (
     }
   });
 
+  log.debug("Checking if lastSynced is set: ", lastSynced, "== -1?: ", lastSynced == -1);
+
   // Sync files in order of folder creation, deletions and uploads/downloads
 
   const potentialErrors: Error[] = [];
@@ -1407,14 +1409,12 @@ export const doActualSync = async (
           queueTotal++;
         }
         // Filter auto-created items from first sync if exist on remote
-        log.debug("Checking if lastSynced is set: ", lastSynced, "== -1?: ", lastSynced == -1);
         if (lastSynced == -1) {
-          const skipKeys = ["app.json", "appearance.json", "core-plugins-migration.json", "core-plugins.json", "graph.json", "workspace.json"];
+          const skipKeys = [".obsidian/app.json", ".obsidian/appearance.json", ".obsidian/core-plugins-migration.json", ".obsidian/core-plugins.json", ".obsidian/graph.json", ".obsidian/workspace.json"];
           if (val.existRemote && skipKeys.includes(key)) {
             log.debug("downloading from remote for first sync: ", key);
             val.decision = "downloadRemoteToLocal";
           }
-
         }
 
         const syncCall = queue.add(async () => await syncIndividualItem(key, isDeleteOp, val, vaultRandomID, client, db, vault, localDeleteFunc, password));
