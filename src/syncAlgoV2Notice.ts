@@ -54,7 +54,6 @@ export class SyncAlgoV2Modal extends Modal {
       this.plugin.saveAgreeToUseNewSyncAlgorithm();
       this.plugin.enableAutoSyncIfSet();
       this.plugin.enableInitSyncIfSet();
-      this.plugin.enableSyncOnSaveIfSet();
     } else {
       this.plugin.unload();
     }
