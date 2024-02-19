@@ -1155,7 +1155,7 @@ export default class RemotelySavePlugin extends Plugin {
       for (let i = 0; i < localConfigContents.length; i++) {
         const file = localConfigContents[i];
 
-        if (file.key.includes(".obsidian/plugins/remotely-sync/")) {
+        if (file.key.includes(".obsidian/plugins/remotely-secure/")) {
           continue;
         }
 
