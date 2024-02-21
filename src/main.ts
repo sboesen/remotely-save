@@ -5,7 +5,7 @@ import {
   Setting,
   setIcon,
   FileSystemAdapter,
-  Platform, TAbstractFile, Vault, EventRef
+  Platform, TAbstractFile, Vault, EventRef,
 } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
 import type {
@@ -493,7 +493,23 @@ export default class RemotelySavePlugin extends Plugin {
     }
   }
 
+  async promptAgreement() {
+    new SyncAlgoV2Modal(this.app, this.i18n, async (result) => {
+      if (result) {
+        this.settings.agreeToUploadExtraMetadata = true;
+        await this.saveSettings();
+        return true;
+      } else {
+        this.unload();
+      }
+    }).open();
+  }
+
   async onload() {
+    if (!this.settings.agreeToUploadExtraMetadata) {
+      await this.promptAgreement();
+    }
+    
     this.oauth2Info = {
       verifier: "",
       helperModal: undefined,
@@ -839,19 +855,14 @@ export default class RemotelySavePlugin extends Plugin {
     //   log.info("click", evt);
     // });
 
-    if (!this.settings.agreeToUploadExtraMetadata) {
-      const syncAlgoV2Modal = new SyncAlgoV2Modal(this.app, this);
-      syncAlgoV2Modal.open();
-    } else {
-      this.enableAutoSyncIfSet();
-      this.enableInitSyncIfSet();
-      this.toggleSyncOnRemote(true);
-      this.toggleSyncOnSave(true);
-      this.toggleStatusBar(true);
-      this.toggleStatusText(true);
+    this.enableAutoSyncIfSet();
+    this.enableInitSyncIfSet();
+    this.toggleSyncOnRemote(true);
+    this.toggleSyncOnSave(true);
+    this.toggleStatusBar(true);
+    this.toggleStatusText(true);
 
-      this.updateSyncStatus("idle");
-    }
+    this.updateSyncStatus("idle");
   }
 
   async onunload() {
@@ -1246,11 +1257,6 @@ export default class RemotelySavePlugin extends Plugin {
         }, this.settings.initRunAfterMilliseconds);
       });
     }
-  }
-
-  async saveAgreeToUseNewSyncAlgorithm() {
-    this.settings.agreeToUploadExtraMetadata = true;
-    await this.saveSettings();
   }
 
   /**
