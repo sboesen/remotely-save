@@ -493,23 +493,13 @@ export default class RemotelySavePlugin extends Plugin {
     }
   }
 
-  async promptAgreement() {
-    new SyncAlgoV2Modal(this.app, this.i18n, async (result) => {
-      if (result) {
-        this.settings.agreeToUploadExtraMetadata = true;
-        await this.saveSettings();
-        return true;
-      } else {
-        this.unload();
-      }
-    }).open();
+  async promptAgreement(): Promise<boolean> {
+    return new Promise((resolve) => {
+      new SyncAlgoV2Modal(this.app, this.i18n, (result) => resolve(result)).open();
+    });
   }
 
   async onload() {
-    if (!this.settings.agreeToUploadExtraMetadata) {
-      await this.promptAgreement();
-    }
-    
     this.oauth2Info = {
       verifier: "",
       helperModal: undefined,
@@ -531,6 +521,19 @@ export default class RemotelySavePlugin extends Plugin {
     const t = (x: TransItemType, vars?: any) => {
       return this.i18n.t(x, vars);
     };
+
+    // Check if they have agreed to uploading metadata
+    if (!this.settings.agreeToUploadExtraMetadata) {
+      const agreed = await this.promptAgreement();
+
+      if (agreed) {
+        this.settings.agreeToUploadExtraMetadata = true;
+        await this.saveSettings();
+      } else {
+        this.unload();
+        return;
+      }
+    }
 
     if (this.settings.debugEnabled) {
       log.setLevel("debug");
