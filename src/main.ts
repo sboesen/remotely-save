@@ -287,6 +287,7 @@ export default class RemotelySavePlugin extends Plugin {
 
       this.updateSyncStatus("finish");
 
+      // This needs to be done differently as getting the mTime from the remote is slow
       this.settings.lastSynced = await this.getMetadataMtime();
       this.saveSettings();
 
@@ -548,8 +549,6 @@ export default class RemotelySavePlugin extends Plugin {
 
     // must AFTER preparing DB
     this.enableAutoClearSyncPlanHist();
-
-    this.updateSyncStatus("idle");
 
     this.registerEvent(
       this.app.vault.on("delete", async (fileOrFolder) => {
@@ -850,6 +849,8 @@ export default class RemotelySavePlugin extends Plugin {
       this.toggleSyncOnSave(true);
       this.toggleStatusBar(true);
       this.toggleStatusText(true);
+
+      this.updateSyncStatus("idle");
     }
   }
 
