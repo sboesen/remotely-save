@@ -20,11 +20,10 @@ export class SyncAlgoV2Modal extends Modal {
       text: this.i18n.t("syncalgov2_title"),
     });
 
-    const ul = contentEl.createEl("ul");
     this.i18n.t("syncalgov2_texts")
       .split("\n")
       .forEach((val) => {
-        ul.createEl("li", {
+        contentEl.createEl("p", {
           text: val,
         });
       });
