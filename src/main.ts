@@ -1059,7 +1059,7 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   toggleStatusBar(enabled: boolean) {  
-    if (enabled && !Platform.isMobileApp && this.settings.enableStatusBarInfo) {
+    if (enabled && this.settings.enableStatusBarInfo) {
       const statusBarItem = this.addStatusBarItem();
       this.statusBarElement = statusBarItem.createEl("span");
       this.statusBarElement.setAttribute("data-tooltip-position", "top");  
