@@ -1660,6 +1660,25 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
+    const statusBarOptions = basicDiv.createEl("div",);
+    statusBarOptions.toggleClass(
+      "hide-element",
+      this.plugin.settings.enableStatusBarInfo === true
+    );
+
+    new Setting(basicDiv)
+    .setName(t("settings_showlastsyncedonly"))
+    .setDesc(t("settings_showlastsyncedonly_desc"))
+    .addToggle((toggle) => {
+      toggle
+        .setValue(this.plugin.settings.showLastSyncedOnly)
+        .onChange(async (val) => {
+          this.plugin.settings.showLastSyncedOnly = val;
+          await this.plugin.saveSettings();
+          this.plugin.toggleStatusBar(true);
+        });
+    });
+
     new Setting(basicDiv)
       .setName(t("settings_trash_locally"))
       .setDesc(t("settings_trash_locally_desc"))
