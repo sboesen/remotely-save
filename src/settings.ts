@@ -1646,7 +1646,6 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
-    // custom status bar items is not supported on mobile
     new Setting(basicDiv)
       .setName(t("settings_enablestatusbar_info"))
       .setDesc(t("settings_enablestatusbar_info_desc"))
@@ -1657,16 +1656,22 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             this.plugin.settings.enableStatusBarInfo = val;
             await this.plugin.saveSettings();
             this.plugin.toggleStatusBar(val);
+
+            statusBarOptions.toggleClass(
+              "hide-element",
+              this.plugin.settings.enableStatusBarInfo !== true
+            );
           });
       });
 
-    const statusBarOptions = basicDiv.createEl("div",);
+    const statusBarOptions = basicDiv.createDiv({ cls: "hide-element" });
+
     statusBarOptions.toggleClass(
       "hide-element",
-      this.plugin.settings.enableStatusBarInfo === true
+      this.plugin.settings.enableStatusBarInfo !== true
     );
 
-    new Setting(basicDiv)
+    new Setting(statusBarOptions)
     .setName(t("settings_showlastsyncedonly"))
     .setDesc(t("settings_showlastsyncedonly_desc"))
     .addToggle((toggle) => {
