@@ -88,6 +88,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   logToDB: false,
   skipSizeLargerThan: -1,
   enableStatusBarInfo: true,
+  showLastSyncedOnly: false,
   lastSynced: -1,
   trashLocal: false,
   syncTrash: false,
@@ -460,8 +461,7 @@ export default class RemotelySavePlugin extends Plugin {
 
   private updateStatusBar(syncQueue?: {i: number, total: number}) {
     const enabled = this.statusBarElement !== undefined && 
-      this.settings.enableStatusBarInfo === true && 
-      !Platform.isMobileApp;
+      this.settings.enableStatusBarInfo === true;
 
     // Update status text
     if (this.syncStatus === "idle") {
@@ -1074,15 +1074,33 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   toggleStatusBar(enabled: boolean) {  
-    if (enabled && !Platform.isMobileApp && this.settings.enableStatusBarInfo) {
-      const statusBarItem = this.addStatusBarItem();
-      this.statusBarElement = statusBarItem.createEl("span");
-      this.statusBarElement.setAttribute("data-tooltip-position", "top");  
-    } else {
-      this.statusBarElement?.remove();
+    const statusBar = document.getElementsByClassName("status-bar")[0];
+
+    this.statusBarElement?.remove();
+
+    // Show all default elements
+    statusBar.childNodes.forEach((element) => {
+      (element as HTMLElement).style.display = "flex";
+    });
+
+    // Enable status bar for mobile
+    if (Platform.isMobile) {
+      (statusBar as HTMLElement).style.display = enabled ? "flex" : "none";
     }
 
-    this.updateStatusBar();
+    if (enabled && this.settings.enableStatusBarInfo) {
+      if (this.settings.showLastSyncedOnly)  {
+        // Hide all default elements
+        statusBar.childNodes.forEach((element) => {
+          (element as HTMLElement).style.display = "none";
+        });
+      }
+
+      this.statusBarElement = this.addStatusBarItem();
+      this.statusBarElement.createEl("span");
+      this.statusBarElement.setAttribute("data-tooltip-position", "top");    
+      this.updateStatusBar(); 
+    }
   }
 
   async toggleSyncOnRemote(enabled: boolean) {

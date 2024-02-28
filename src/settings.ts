@@ -1646,21 +1646,43 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
-    // custom status bar items is not supported on mobile
-    if (!Platform.isMobileApp) {
-      new Setting(basicDiv)
-        .setName(t("settings_enablestatusbar_info"))
-        .setDesc(t("settings_enablestatusbar_info_desc"))
-        .addToggle((toggle) => {
-          toggle
-            .setValue(this.plugin.settings.enableStatusBarInfo)
-            .onChange(async (val) => {
-              this.plugin.settings.enableStatusBarInfo = val;
-              await this.plugin.saveSettings();
-              this.plugin.toggleStatusBar(val);
-            });
+    new Setting(basicDiv)
+      .setName(t("settings_enablestatusbar_info"))
+      .setDesc(t("settings_enablestatusbar_info_desc"))
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.enableStatusBarInfo)
+          .onChange(async (val) => {
+            this.plugin.settings.enableStatusBarInfo = val;
+            await this.plugin.saveSettings();
+            this.plugin.toggleStatusBar(val);
+
+            statusBarOptions.toggleClass(
+              "hide-element",
+              this.plugin.settings.enableStatusBarInfo !== true
+            );
+          });
+      });
+
+    const statusBarOptions = basicDiv.createDiv({ cls: "hide-element" });
+
+    statusBarOptions.toggleClass(
+      "hide-element",
+      this.plugin.settings.enableStatusBarInfo !== true
+    );
+
+    new Setting(statusBarOptions)
+    .setName(t("settings_showlastsyncedonly"))
+    .setDesc(t("settings_showlastsyncedonly_desc"))
+    .addToggle((toggle) => {
+      toggle
+        .setValue(this.plugin.settings.showLastSyncedOnly)
+        .onChange(async (val) => {
+          this.plugin.settings.showLastSyncedOnly = val;
+          await this.plugin.saveSettings();
+          this.plugin.toggleStatusBar(true);
         });
-    }
+    });
 
     new Setting(basicDiv)
       .setName(t("settings_trash_locally"))
