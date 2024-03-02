@@ -126,7 +126,7 @@ export default class RemotelySavePlugin extends Plugin {
   vaultScannerIntervalId?: number;
   syncOnRemoteIntervalID?: number;
   statusBarIntervalID: number;
-  statusBarObserver: MutationObserver;
+  statusBarObserver?: MutationObserver;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
     this.isManual = triggerSource === "manual";
@@ -861,39 +861,14 @@ export default class RemotelySavePlugin extends Plugin {
 
     this.enableAutoSyncIfSet();
     this.enableInitSyncIfSet();
+
     this.toggleSyncOnRemote(true);
     this.toggleSyncOnSave(true);
     this.toggleStatusBar(true);
     this.toggleStatusText(true);
+    this.toggleStatusBarObserver(true);
 
     this.updateSyncStatus("idle");
-
-    // Refresh status bar if new elements are found
-    this.statusBarObserver = new MutationObserver((mutationList, observer) => {
-      let shouldCall = false;
-      let byPlugin = false;
-
-      for (const mutation of mutationList) {
-        if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
-          shouldCall = true;
-        }
-
-        mutation.addedNodes.forEach((node) => {
-          if ((node as Element).className === "status-bar-item plugin-remotely-secure") {
-            byPlugin = true;
-          }
-        })
-      }
-     
-      if (shouldCall && !byPlugin) {
-        log.debug("Status bar item added, refreshing status bar.")
-        this.toggleStatusBar(true);
-      }
-    });
-
-    const statusBar = document.getElementsByClassName("status-bar")[0];
-
-    this.statusBarObserver.observe(statusBar, { childList: true});
   }
 
   async onunload() {
@@ -903,13 +878,12 @@ export default class RemotelySavePlugin extends Plugin {
       this.oauth2Info = undefined;
     }
 
-    this.statusBarObserver.disconnect();
-    
-    // Clear intervals
+    // Disable Features
     this.toggleSyncOnSave(false);
     this.toggleSyncOnRemote(false);
     this.toggleStatusText(false);
     this.toggleStatusBar(false);
+    this.toggleStatusBarObserver(false);
   }
 
   async loadSettings() {
@@ -1249,6 +1223,39 @@ export default class RemotelySavePlugin extends Plugin {
 
     // Scans every 60 seconds
     this.vaultScannerIntervalId = window.setInterval(scanVault, 30_000);
+  }
+
+  toggleStatusBarObserver(enabled: boolean) {
+    this.statusBarObserver?.disconnect();
+    this.statusBarObserver = undefined;
+
+    // Refresh status bar if new elements are found only if show only last synced is set.
+    if (enabled && this.settings.showLastSyncedOnly) {
+      this.statusBarObserver = new MutationObserver((mutationList, observer) => {
+        let shouldCall = false;
+        let byPlugin = false;
+
+        for (const mutation of mutationList) {
+          if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+            shouldCall = true;
+          }
+
+          mutation.addedNodes.forEach((node) => {
+            if ((node as Element).className === "status-bar-item plugin-remotely-secure") {
+              byPlugin = true;
+            }
+          })
+        }
+      
+        if (shouldCall && !byPlugin) {
+          log.debug("Status bar item added, refreshing status bar.")
+          this.toggleStatusBar(true);
+        }
+      });
+
+      const statusBar = document.getElementsByClassName("status-bar")[0];
+      this.statusBarObserver.observe(statusBar, { childList: true});
+    }
   }
   
   async getMetadataMtime() {

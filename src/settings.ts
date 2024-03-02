@@ -1681,6 +1681,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           this.plugin.settings.showLastSyncedOnly = val;
           await this.plugin.saveSettings();
           this.plugin.toggleStatusBar(true);
+          this.plugin.toggleStatusBarObserver(val);
         });
     });
 
