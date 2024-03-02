@@ -62,6 +62,15 @@
   height: 350px;
 }
 
-.hide-element {
-  display: none;
+/* !important isn't great practice but it needs to overwrite other css classes */
+.remotely-sync-hidden {
+  display: none !important; 
+}
+
+.remotely-sync-show-status-bar {
+  display: flex !important;
+}
+
+.remotely-sync-shift-status-bar {
+  margin-bottom: 48px !important;
 }

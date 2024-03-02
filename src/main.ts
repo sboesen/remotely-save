@@ -1076,27 +1076,35 @@ export default class RemotelySavePlugin extends Plugin {
   toggleStatusBar(enabled: boolean) {  
     this.statusBarElement?.remove();
 
-    const statusBar = document.getElementsByClassName("status-bar")[0];
+    const statusBar = document.getElementsByClassName("status-bar")[0] as HTMLElement;
 
-    // Enable status bar for mobile
-    if (Platform.isMobile) {
-      (statusBar as HTMLElement).style.display = this.settings.enableStatusBarInfo ? "flex" : "none";
-    }
+    // Remove any remotely sync classes
+    statusBar.removeClass("remotely-sync-show-status-bar");
+    statusBar.removeClass("remotely-sync-shift-status-bar");
+
+    Array.from(statusBar.children).forEach((element) => {
+      element.removeClass("remotely-sync-hidden");
+    });
 
     if (enabled && this.settings.enableStatusBarInfo) {
-      // Show all default elements
-      Array.from(statusBar.children).forEach((element) => {
-        (element as HTMLElement).removeClass("hide-element");
-      });
+      // Enable status bar on mobile
+      if (Platform.isMobile) {
+        statusBar.addClass("remotely-sync-show-status-bar");
+        
+        // Shifts up the status bar on phone to not cover the navmenu
+        if (Platform.isPhone) {
+          statusBar.addClass("remotely-sync-shift-status-bar");
+        }
+      }
 
+      // Hide every element if set
       if (this.settings.showLastSyncedOnly)  {
-        // Hide all default elements
-        log.debug("HIde all elements")
         Array.from(statusBar.children).forEach((element) => {
-          (element as HTMLElement).addClass("hide-element");
+          (element as HTMLElement).addClass("remotely-sync-hidden");
         });
       }
 
+      // Create remotely sync element
       this.statusBarElement = this.addStatusBarItem();
       this.statusBarElement.createEl("span");
       this.statusBarElement.setAttribute("data-tooltip-position", "top");    

@@ -1658,16 +1658,16 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             this.plugin.toggleStatusBar(val);
 
             statusBarOptions.toggleClass(
-              "hide-element",
+              "remotely-sync-hidden",
               this.plugin.settings.enableStatusBarInfo !== true
             );
           });
       });
 
-    const statusBarOptions = basicDiv.createDiv({ cls: "hide-element" });
+    const statusBarOptions = basicDiv.createDiv({ cls: "remotely-sync-hidden" });
 
     statusBarOptions.toggleClass(
-      "hide-element",
+      "remotely-sync-hidden",
       this.plugin.settings.enableStatusBarInfo !== true
     );
 
