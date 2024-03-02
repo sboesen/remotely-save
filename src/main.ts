@@ -1059,21 +1059,21 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   toggleStatusBar(enabled: boolean) {  
-    const statusBar = document.getElementsByClassName("status-bar")[0];
-
     this.statusBarElement?.remove();
 
-    // Show all default elements
-    statusBar.childNodes.forEach((element) => {
-      (element as HTMLElement).style.display = "flex";
-    });
-
-    // Enable status bar for mobile
-    if (Platform.isMobile) {
-      (statusBar as HTMLElement).style.display = enabled ? "flex" : "none";
-    }
-
     if (enabled && this.settings.enableStatusBarInfo) {
+      const statusBar = document.getElementsByClassName("status-bar")[0];
+
+      // Show all default elements
+      statusBar.childNodes.forEach((element) => {
+        (element as HTMLElement).style.display = "flex";
+      });
+
+      // Enable status bar for mobile
+      if (Platform.isMobile) {
+        (statusBar as HTMLElement).style.display = enabled ? "flex" : "none";
+      }
+
       if (this.settings.showLastSyncedOnly)  {
         // Hide all default elements
         statusBar.childNodes.forEach((element) => {
