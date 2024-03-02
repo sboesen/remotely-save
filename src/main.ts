@@ -87,8 +87,8 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   lang: "auto",
   logToDB: false,
   skipSizeLargerThan: -1,
-  enableStatusBarInfo: true,
-  showLastSyncedOnly: false,
+  enableStatusBarInfo: undefined,
+  showLastSyncedOnly: undefined,
   lastSynced: -1,
   trashLocal: false,
   syncTrash: false,
@@ -854,6 +854,18 @@ export default class RemotelySavePlugin extends Plugin {
     });
     
     this.addSettingTab(new RemotelySaveSettingTab(this.app, this));
+
+    // Show status bar show by default on desktop only
+    if (this.settings.enableStatusBarInfo === undefined) {
+      this.settings.enableStatusBarInfo = Platform.isMobile ? false : true;
+    }
+
+    // Hide all other elements in status bar by default on mobile only
+    if (this.settings.showLastSyncedOnly === undefined) {
+      this.settings.enableStatusBarInfo = Platform.isMobile ? true : false;
+    }
+
+    this.saveSettings();
 
     // this.registerDomEvent(document, "click", (evt: MouseEvent) => {
     //   log.info("click", evt);
