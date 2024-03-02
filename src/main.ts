@@ -862,7 +862,7 @@ export default class RemotelySavePlugin extends Plugin {
 
     // Hide all other elements in status bar by default on mobile only
     if (this.settings.showLastSyncedOnly === undefined) {
-      this.settings.enableStatusBarInfo = Platform.isMobile ? true : false;
+      this.settings.showLastSyncedOnly = Platform.isMobile ? true : false;
     }
 
     this.saveSettings();
