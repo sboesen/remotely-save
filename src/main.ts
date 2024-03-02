@@ -5,7 +5,7 @@ import {
   Setting,
   setIcon,
   FileSystemAdapter,
-  Platform, TAbstractFile, Vault, EventRef
+  Platform, TAbstractFile, Vault, EventRef,
 } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
 import type {
@@ -288,6 +288,7 @@ export default class RemotelySavePlugin extends Plugin {
 
       this.updateSyncStatus("finish");
 
+      // This needs to be done differently as getting the mTime from the remote is slow
       this.settings.lastSynced = await this.getMetadataMtime();
       this.saveSettings();
 
@@ -492,6 +493,12 @@ export default class RemotelySavePlugin extends Plugin {
     }
   }
 
+  async promptAgreement(): Promise<boolean> {
+    return new Promise((resolve) => {
+      new SyncAlgoV2Modal(this.app, this.i18n, (result) => resolve(result)).open();
+    });
+  }
+
   async onload() {
     this.oauth2Info = {
       verifier: "",
@@ -514,6 +521,19 @@ export default class RemotelySavePlugin extends Plugin {
     const t = (x: TransItemType, vars?: any) => {
       return this.i18n.t(x, vars);
     };
+
+    // Check if they have agreed to uploading metadata
+    if (!this.settings.agreeToUploadExtraMetadata) {
+      const agreed = await this.promptAgreement();
+
+      if (agreed) {
+        this.settings.agreeToUploadExtraMetadata = true;
+        await this.saveSettings();
+      } else {
+        this.unload();
+        return;
+      }
+    }
 
     if (this.settings.debugEnabled) {
       log.setLevel("debug");
@@ -548,8 +568,6 @@ export default class RemotelySavePlugin extends Plugin {
 
     // must AFTER preparing DB
     this.enableAutoClearSyncPlanHist();
-
-    this.updateSyncStatus("idle");
 
     this.registerEvent(
       this.app.vault.on("delete", async (fileOrFolder) => {
@@ -840,17 +858,14 @@ export default class RemotelySavePlugin extends Plugin {
     //   log.info("click", evt);
     // });
 
-    if (!this.settings.agreeToUploadExtraMetadata) {
-      const syncAlgoV2Modal = new SyncAlgoV2Modal(this.app, this);
-      syncAlgoV2Modal.open();
-    } else {
-      this.enableAutoSyncIfSet();
-      this.enableInitSyncIfSet();
-      this.toggleSyncOnRemote(true);
-      this.toggleSyncOnSave(true);
-      this.toggleStatusBar(true);
-      this.toggleStatusText(true);
-    }
+    this.enableAutoSyncIfSet();
+    this.enableInitSyncIfSet();
+    this.toggleSyncOnRemote(true);
+    this.toggleSyncOnSave(true);
+    this.toggleStatusBar(true);
+    this.toggleStatusText(true);
+
+    this.updateSyncStatus("idle");
   }
 
   async onunload() {
@@ -1263,11 +1278,6 @@ export default class RemotelySavePlugin extends Plugin {
         }, this.settings.initRunAfterMilliseconds);
       });
     }
-  }
-
-  async saveAgreeToUseNewSyncAlgorithm() {
-    this.settings.agreeToUploadExtraMetadata = true;
-    await this.saveSettings();
   }
 
   /**
