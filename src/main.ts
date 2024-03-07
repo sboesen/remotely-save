@@ -1114,12 +1114,16 @@ export default class RemotelySavePlugin extends Plugin {
       return;
     }
 
+    let checkingMetadata = false;
+
     const syncOnRemote = async () => {
-      if (this.syncStatus !== "idle") {
+      if (this.syncStatus !== "idle" || checkingMetadata) {
         return;
       }
 
+      checkingMetadata = true;
       const metadataMtime = await this.getMetadataMtime();
+      checkingMetadata = false;
 
       if (metadataMtime === undefined) {
         return false;
@@ -1215,15 +1219,15 @@ export default class RemotelySavePlugin extends Plugin {
   async getMetadataMtime() {
     const client = this.getRemoteClient(this);
 
-    const remoteRsp = await client.listFromRemote();
-    const {remoteStates, metadataFile} = await this.parseRemoteItems(remoteRsp.Contents, client);
-    const metadataPath = await getMetadataPath(metadataFile, this.settings.password);
+    const path = await getMetadataPath();
+    const remoteMetadata = await client.getMetadataFromRemote(path);
+    const lastSynced = remoteMetadata.lastModified
 
-    if (metadataPath == undefined) {
-      return undefined;
+    if (lastSynced === undefined && this.settings.lastSynced !== undefined) {
+      return this.settings.lastSynced;
     }
-    
-    return (await client.getMetadataFromRemote(metadataPath)).lastModified;
+
+    return lastSynced;
   }
 
   private async getSyncPlan2() {

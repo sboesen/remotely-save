@@ -1080,24 +1080,14 @@ export const uploadExtraMeta = async (
   );
 };
 
-export const getMetadataPath = async (metadataFile: FileOrFolderMixedState | undefined, password: string = "") => {
-  if (metadataFile === undefined) {
-    log.debug("no metadata file, so no file path");
-    return;
-  }
-
-  const key = DEFAULT_FILE_NAME_FOR_METADATAONREMOTE;
-  let remoteEncryptedKey = key;
+export const getMetadataPath = async (password: string = "") => {
+  let key = DEFAULT_FILE_NAME_FOR_METADATAONREMOTE;
 
   if (password !== "") {
-    remoteEncryptedKey = metadataFile.remoteEncryptedKey;
-
-    if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
-      remoteEncryptedKey = await encryptStringToBase64url(key, password);
-    }
+    key = await encryptStringToBase64url(key, password);
   }
 
-  return remoteEncryptedKey;
+  return key;
 };
 
 const dispatchOperationToActual = async (
