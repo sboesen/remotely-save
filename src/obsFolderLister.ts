@@ -110,6 +110,7 @@ export const listFilesInObsFolder = async (
             if (isFolderToSkip(iter2)) {
               continue;
             }
+            
             if (isInsideSelfPlugin && !isLikelyPluginSubFiles(iter2)) {
               // special treatment for remotely-secure folder
               continue;
