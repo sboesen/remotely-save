@@ -137,6 +137,25 @@ export const getMetadataFiles = async(
   return metadataFiles;
 }
 
+export const getMetadataFromRemoteFiles = async(
+  remoteFiles: RemoteItem[],
+  password: string = ""
+)=> {
+  for (const entry of remoteFiles) {
+    const remoteEncryptedKey = entry.key;
+
+    let key = remoteEncryptedKey;
+
+    if (password !== "") {
+      key = await decryptBase64urlToString(remoteEncryptedKey, password);
+    }
+
+    if (key == DEFAULT_FILE_NAME_FOR_METADATAONREMOTE) {
+      return entry;
+    }
+  }
+}
+
 export const parseRemoteItems = async (
   remote: RemoteItem[],
   db: InternalDBs,
@@ -1078,16 +1097,6 @@ export const uploadExtraMeta = async (
     true,
     resultText
   );
-};
-
-export const getMetadataPath = async (password: string = "") => {
-  let key = DEFAULT_FILE_NAME_FOR_METADATAONREMOTE;
-
-  if (password !== "") {
-    key = await encryptStringToBase64url(key, password);
-  }
-
-  return key;
 };
 
 const dispatchOperationToActual = async (

@@ -48,7 +48,7 @@ import { DEFAULT_S3_CONFIG } from "./remoteForS3";
 import { DEFAULT_WEBDAV_CONFIG } from "./remoteForWebdav";
 import { RemotelySaveSettingTab } from "./settings";
 import {fetchMetadataFile, parseRemoteItems, SyncPlanType, SyncStatusType} from "./sync";
-import { doActualSync, getSyncPlan, isPasswordOk, getMetadataPath } from "./sync";
+import { doActualSync, getSyncPlan, isPasswordOk, getMetadataFromRemoteFiles } from "./sync";
 import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
 import { ObsConfigDirFileType, listFilesInObsFolder } from "./obsFolderLister";
 import { I18n } from "./i18n";
@@ -1218,10 +1218,11 @@ export default class RemotelySavePlugin extends Plugin {
   
   async getMetadataMtime() {
     const client = this.getRemoteClient(this);
+    
+    const remoteFiles = await client.listFromRemote();
+    const remoteMetadataFile = await getMetadataFromRemoteFiles(remoteFiles.Contents, this.settings.password);
 
-    const path = await getMetadataPath();
-    const remoteMetadata = await client.getMetadataFromRemote(path);
-    const lastSynced = remoteMetadata.lastModified
+    const lastSynced = remoteMetadataFile.lastModified;
 
     if (lastSynced === undefined && this.settings.lastSynced !== undefined) {
       return this.settings.lastSynced;
