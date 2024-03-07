@@ -2009,6 +2009,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText(t("settings_reset_button"));
         button.onClick(async () => {
           // Delete all remote metadata file(s) and upload empty one.
+          new Notice(t("settings_reset_sync_metadata_notice_start"))
+          log.debug("Deleting remote metadata file. (1/2)")
           await this.deleteRemoteMetadata();
           await uploadExtraMeta(this.getClient(),
             this.app.vault,
@@ -2016,7 +2018,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             undefined,
             [],
             this.plugin.settings.password );
-          new Notice(t("settings_reset_sync_metadata_notice"));
+          new Notice(t("settings_reset_sync_metadata_notice_end"));
+          log.debug("Remote metadata file deleted. (2/2)")
         });
       });
   }
@@ -2026,12 +2029,11 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     let remoteFiles = await client.listFromRemote();
     let remoteMetadataFiles = await getMetadataFiles(remoteFiles.Contents, this.plugin.settings.password)
 
-
+    log.debug(remoteMetadataFiles)
     for (const metadataFile of remoteMetadataFiles) {
       await client.deleteFromRemote(DEFAULT_FILE_NAME_FOR_METADATAONREMOTE,
         this.plugin.settings.password,
         metadataFile);
-
     }
   }
 
