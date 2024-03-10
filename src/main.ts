@@ -87,8 +87,8 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   lang: "auto",
   logToDB: false,
   skipSizeLargerThan: -1,
-  enableStatusBarInfo: true,
-  showLastSyncedOnly: false,
+  enableStatusBarInfo: undefined,
+  showLastSyncedOnly: undefined,
   lastSynced: -1,
   trashLocal: false,
   syncTrash: false,
@@ -126,6 +126,7 @@ export default class RemotelySavePlugin extends Plugin {
   vaultScannerIntervalId?: number;
   syncOnRemoteIntervalID?: number;
   statusBarIntervalID: number;
+  statusBarObserver?: MutationObserver;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
     this.isManual = triggerSource === "manual";
@@ -854,16 +855,30 @@ export default class RemotelySavePlugin extends Plugin {
     
     this.addSettingTab(new RemotelySaveSettingTab(this.app, this));
 
+    // Show status bar show by default on desktop only
+    if (this.settings.enableStatusBarInfo === undefined) {
+      this.settings.enableStatusBarInfo = Platform.isMobile ? false : true;
+    }
+
+    // Hide all other elements in status bar by default on mobile only
+    if (this.settings.showLastSyncedOnly === undefined) {
+      this.settings.showLastSyncedOnly = Platform.isMobile ? true : false;
+    }
+
+    this.saveSettings();
+
     // this.registerDomEvent(document, "click", (evt: MouseEvent) => {
     //   log.info("click", evt);
     // });
 
     this.enableAutoSyncIfSet();
     this.enableInitSyncIfSet();
+
     this.toggleSyncOnRemote(true);
     this.toggleSyncOnSave(true);
     this.toggleStatusBar(true);
     this.toggleStatusText(true);
+    this.toggleStatusBarObserver(true);
 
     this.updateSyncStatus("idle");
   }
@@ -874,12 +889,13 @@ export default class RemotelySavePlugin extends Plugin {
       this.oauth2Info.helperModal = undefined;
       this.oauth2Info = undefined;
     }
-    
-    // Clear intervals
+
+    // Disable Features
     this.toggleSyncOnSave(false);
     this.toggleSyncOnRemote(false);
     this.toggleStatusText(false);
     this.toggleStatusBar(false);
+    this.toggleStatusBarObserver(false);
   }
 
   async loadSettings() {
@@ -1074,28 +1090,37 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   toggleStatusBar(enabled: boolean) {  
-    const statusBar = document.getElementsByClassName("status-bar")[0];
-
     this.statusBarElement?.remove();
 
-    // Show all default elements
-    statusBar.childNodes.forEach((element) => {
-      (element as HTMLElement).style.display = "flex";
+    const statusBar = document.getElementsByClassName("status-bar")[0] as HTMLElement;
+
+    // Remove any remotely sync classes
+    statusBar.removeClass("remotely-sync-show-status-bar");
+    statusBar.removeClass("remotely-sync-shift-status-bar");
+
+    Array.from(statusBar.children).forEach((element) => {
+      element.removeClass("remotely-sync-hidden");
     });
 
-    // Enable status bar for mobile
-    if (Platform.isMobile) {
-      (statusBar as HTMLElement).style.display = enabled ? "flex" : "none";
-    }
-
     if (enabled && this.settings.enableStatusBarInfo) {
+      // Enable status bar on mobile
+      if (Platform.isMobile) {
+        statusBar.addClass("remotely-sync-show-status-bar");
+        
+        // Shifts up the status bar on phone to not cover the navmenu
+        if (Platform.isPhone) {
+          statusBar.addClass("remotely-sync-shift-status-bar");
+        }
+      }
+
+      // Hide every element if set
       if (this.settings.showLastSyncedOnly)  {
-        // Hide all default elements
-        statusBar.childNodes.forEach((element) => {
-          (element as HTMLElement).style.display = "none";
+        Array.from(statusBar.children).forEach((element) => {
+          (element as HTMLElement).addClass("remotely-sync-hidden");
         });
       }
 
+      // Create remotely sync element
       this.statusBarElement = this.addStatusBarItem();
       this.statusBarElement.createEl("span");
       this.statusBarElement.setAttribute("data-tooltip-position", "top");    
@@ -1210,6 +1235,39 @@ export default class RemotelySavePlugin extends Plugin {
 
     // Scans every 60 seconds
     this.vaultScannerIntervalId = window.setInterval(scanVault, 30_000);
+  }
+
+  toggleStatusBarObserver(enabled: boolean) {
+    this.statusBarObserver?.disconnect();
+    this.statusBarObserver = undefined;
+
+    // Refresh status bar if new elements are found only if show only last synced is set.
+    if (enabled && this.settings.showLastSyncedOnly) {
+      this.statusBarObserver = new MutationObserver((mutationList, observer) => {
+        let shouldCall = false;
+        let byPlugin = false;
+
+        for (const mutation of mutationList) {
+          if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+            shouldCall = true;
+          }
+
+          mutation.addedNodes.forEach((node) => {
+            if ((node as Element).className === "status-bar-item plugin-remotely-secure") {
+              byPlugin = true;
+            }
+          })
+        }
+      
+        if (shouldCall && !byPlugin) {
+          log.debug("Status bar item added, refreshing status bar.")
+          this.toggleStatusBar(true);
+        }
+      });
+
+      const statusBar = document.getElementsByClassName("status-bar")[0];
+      this.statusBarObserver.observe(statusBar, { childList: true});
+    }
   }
   
   async getMetadataMtime() {
