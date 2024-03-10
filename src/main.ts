@@ -290,10 +290,10 @@ export default class RemotelySavePlugin extends Plugin {
       this.updateSyncStatus("finish");
 
       // This needs to be done differently as getting the mTime from the remote is slow
-      log.debug("Start getting last synced from remote.")
+      log.debug("start getting last synced from remote")
       this.settings.lastSynced = await this.getMetadataMtime();
-      log.debug("Finish getting last synced from remote.");
-      
+      log.debug("finish getting last synced from remote");
+
       this.saveSettings();
 
       this.updateSyncStatus("idle");
@@ -490,6 +490,10 @@ export default class RemotelySavePlugin extends Plugin {
       } else {
         this.syncStatusText = this.i18n.t("syncrun_status_syncing");
       }
+    }
+
+    if (this.syncStatus === "finish") {
+      this.syncStatusText = this.i18n.t("syncrun_status_syncing");
     }
 
     if (enabled) {
