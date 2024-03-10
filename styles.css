@@ -70,7 +70,3 @@
 .remotely-sync-show-status-bar {
   display: flex !important;
 }
-
-.remotely-sync-shift-status-bar {
-  margin-bottom: 48px !important;
-}
