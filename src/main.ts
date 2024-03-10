@@ -48,7 +48,7 @@ import { DEFAULT_S3_CONFIG } from "./remoteForS3";
 import { DEFAULT_WEBDAV_CONFIG } from "./remoteForWebdav";
 import { RemotelySaveSettingTab } from "./settings";
 import {fetchMetadataFile, parseRemoteItems, SyncPlanType, SyncStatusType} from "./sync";
-import { doActualSync, getSyncPlan, isPasswordOk, getMetadataPath } from "./sync";
+import { doActualSync, getSyncPlan, isPasswordOk, getMetadataFromRemoteFiles } from "./sync";
 import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
 import { ObsConfigDirFileType, listFilesInObsFolder } from "./obsFolderLister";
 import { I18n } from "./i18n";
@@ -1139,12 +1139,16 @@ export default class RemotelySavePlugin extends Plugin {
       return;
     }
 
+    let checkingMetadata = false;
+
     const syncOnRemote = async () => {
-      if (this.syncStatus !== "idle") {
+      if (this.syncStatus !== "idle" || checkingMetadata) {
         return;
       }
 
+      checkingMetadata = true;
       const metadataMtime = await this.getMetadataMtime();
+      checkingMetadata = false;
 
       if (metadataMtime === undefined) {
         return false;
@@ -1272,16 +1276,17 @@ export default class RemotelySavePlugin extends Plugin {
   
   async getMetadataMtime() {
     const client = this.getRemoteClient(this);
-
-    const remoteRsp = await client.listFromRemote();
-    const {remoteStates, metadataFile} = await this.parseRemoteItems(remoteRsp.Contents, client);
-    const metadataPath = await getMetadataPath(metadataFile, this.settings.password);
-
-    if (metadataPath == undefined) {
-      return undefined;
-    }
     
-    return (await client.getMetadataFromRemote(metadataPath)).lastModified;
+    const remoteFiles = await client.listFromRemote();
+    const remoteMetadataFile = await getMetadataFromRemoteFiles(remoteFiles.Contents, this.settings.password);
+
+    const lastSynced = remoteMetadataFile.lastModified;
+
+    if (lastSynced === undefined && this.settings.lastSynced !== undefined) {
+      return this.settings.lastSynced;
+    }
+
+    return lastSynced;
   }
 
   private async getSyncPlan2() {

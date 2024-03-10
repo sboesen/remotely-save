@@ -29,10 +29,10 @@ const isFolderToSkip = (x: string) => {
 
 const isPluginDirItself = (x: string, pluginId: string) => {
   return (
-    x === pluginId ||
-    x === `${pluginId}/` ||
-    x.endsWith(`/${pluginId}`) ||
-    x.endsWith(`/${pluginId}/`)
+    x === "remotely-secure" ||
+    x === "remotely-secure/" ||
+    x.endsWith("/remotely-secure") ||
+    x.endsWith("/remotely-secure/")
   );
 };
 
@@ -110,6 +110,7 @@ export const listFilesInObsFolder = async (
             if (isFolderToSkip(iter2)) {
               continue;
             }
+            
             if (isInsideSelfPlugin && !isLikelyPluginSubFiles(iter2)) {
               // special treatment for remotely-secure folder
               continue;
