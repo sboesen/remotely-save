@@ -289,9 +289,10 @@ export default class RemotelySavePlugin extends Plugin {
 
       this.updateSyncStatus("finish");
 
-      // This needs to be done differently as getting the mTime from the remote is slow
+      log.debug("start getting last synced from remote")
       this.settings.lastSynced = await this.getMetadataMtime();
       this.saveSettings();
+      log.debug("finish getting last synced from remote");
 
       this.updateSyncStatus("idle");
       this.setSyncIcon(false);
@@ -1096,7 +1097,7 @@ export default class RemotelySavePlugin extends Plugin {
 
     // Remove any remotely sync classes
     statusBar.removeClass("remotely-sync-show-status-bar");
-    statusBar.removeClass("remotely-sync-shift-status-bar");
+    statusBar.style.marginBottom = "0px";
 
     Array.from(statusBar.children).forEach((element) => {
       element.removeClass("remotely-sync-hidden");
@@ -1109,7 +1110,9 @@ export default class RemotelySavePlugin extends Plugin {
         
         // Shifts up the status bar on phone to not cover the navmenu
         if (Platform.isPhone) {
-          statusBar.addClass("remotely-sync-shift-status-bar");
+          const navBar = document.getElementsByClassName("mobile-navbar")[0] as HTMLElement;
+          const height = window.getComputedStyle(navBar).getPropertyValue('height');
+          statusBar.style.marginBottom = height;
         }
       }
 
