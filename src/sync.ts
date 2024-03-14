@@ -137,6 +137,25 @@ export const getMetadataFiles = async(
   return metadataFiles;
 }
 
+export const getMetadataFromRemoteFiles = async(
+  remoteFiles: RemoteItem[],
+  password: string = ""
+)=> {
+  for (const entry of remoteFiles) {
+    const remoteEncryptedKey = entry.key;
+
+    let key = remoteEncryptedKey;
+
+    if (password !== "") {
+      key = await decryptBase64urlToString(remoteEncryptedKey, password);
+    }
+
+    if (key == DEFAULT_FILE_NAME_FOR_METADATAONREMOTE) {
+      return entry;
+    }
+  }
+}
+
 export const parseRemoteItems = async (
   remote: RemoteItem[],
   db: InternalDBs,
@@ -1087,26 +1106,6 @@ export const uploadExtraMeta = async (
   );
 };
 
-export const getMetadataPath = async (metadataFile: FileOrFolderMixedState | undefined, password: string = "") => {
-  if (metadataFile === undefined) {
-    log.debug("no metadata file, so no file path");
-    return;
-  }
-
-  const key = DEFAULT_FILE_NAME_FOR_METADATAONREMOTE;
-  let remoteEncryptedKey = key;
-
-  if (password !== "") {
-    remoteEncryptedKey = metadataFile.remoteEncryptedKey;
-
-    if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
-      remoteEncryptedKey = await encryptStringToBase64url(key, password);
-    }
-  }
-
-  return remoteEncryptedKey;
-};
-
 const dispatchOperationToActual = async (
   key: string,
   vaultRandomID: string,
@@ -1328,7 +1327,7 @@ function isCountableSyncItem(item: FileOrFolderMixedState) {
   return item.decision != "keepRemoteDelHist" && !item.decision.contains("skip");
 }
 
-async function syncIndividualItem(key: string, val: FileOrFolderMixedState, vaultRandomID: string, client: RemoteClient, db: InternalDBs, vault: Vault, localDeleteFunc: any, password: string) {
+async function syncIndividualItem(key: string, deletionOp: boolean, val: FileOrFolderMixedState, vaultRandomID: string, client: RemoteClient, db: InternalDBs, vault: Vault, localDeleteFunc: any, password: string) {
   log.debug(`start syncing "${key}" with plan ${JSON.stringify(val)}`);
 
   await dispatchOperationToActual(
@@ -1341,7 +1340,10 @@ async function syncIndividualItem(key: string, val: FileOrFolderMixedState, vaul
     localDeleteFunc,
     password
   );
+
   log.debug(`finished ${key}`);
+
+  return deletionOp;
 }
 
 export const doActualSync = async (
@@ -1357,6 +1359,7 @@ export const doActualSync = async (
   deletions: DeletionOnRemote[],
   localDeleteFunc: any,
   password: string = "",
+  lastSynced?: number,
   concurrency: number = 1,
   callbackSizesGoWrong?: any,
   callbackSyncProcess?: any
@@ -1367,36 +1370,60 @@ export const doActualSync = async (
     return;
   }
 
+  // Get and print sync info
+
   log.debug(`concurrency === ${concurrency}`);
 
   const { folderCreationOps, deletionOps, uploadDownloads, realTotalCount } =  splitThreeSteps(syncPlan, sortedKeys);
   const nested = [folderCreationOps, deletionOps, uploadDownloads];
-  const logTexts = [
-    `1. create all folders from shadowest to deepest, also check undefined decision`,
-    `2. delete files and folders from deepest to shadowest`,
-    `3. upload or download files in parallel, with the desired concurrency=${concurrency}`,
-  ];
 
   log.debug("folderCreationOps: ", folderCreationOps.length,
   " deletionOps: ", deletionOps.length,
   " uploadDownloads: ", uploadDownloads.length);
 
+  // Prepare sync queue
+
+  const queue = new PQueue({ concurrency: concurrency, autoStart: true });
+  let queueTotal = 0;
+  let queueIndex = 0;
+
+  queue.on('completed', async (result) => {
+    if (result !== true) {
+      queueIndex++;
+
+      await callbackSyncProcess(queueIndex, queueTotal);
+    }
+  });
+
+  log.debug("Checking if lastSynced is set: ", lastSynced, "== -1?: ", lastSynced == -1);
+
   // Sync files in order of folder creation, deletions and uploads/downloads
-  // Must be for of to stop rest of code running before promises resolve
+
+  const potentialErrors: Error[] = [];
+
   for (const operation of nested) {
     for (const singleLevelOps of operation) {
       if (singleLevelOps === undefined || singleLevelOps === null) {
         continue;
       }
 
-      const queue = new PQueue({ concurrency: concurrency, autoStart: true });
-      const potentialErrors: Error[] = [];
-
-      for (let i = 0; i < singleLevelOps.length; ++i) {
-        const val: FileOrFolderMixedState = singleLevelOps[i];
+      for (const val of singleLevelOps) {
         const key = val.key;
+        const isDeleteOp = operation === deletionOps;
 
-        const syncCall = queue.add(async () => await syncIndividualItem(key, val, vaultRandomID, client, db, vault, localDeleteFunc, password));
+        if (isDeleteOp === false) {
+          queueTotal++;
+        }
+        // Filter auto-created items from first sync if exist on remote
+        if (lastSynced == -1) {
+          const skipKeys = [".obsidian/app.json", ".obsidian/appearance.json", ".obsidian/core-plugins-migration.json", ".obsidian/core-plugins.json", ".obsidian/graph.json", ".obsidian/workspace.json"];
+          if (val.existRemote && skipKeys.includes(key)) {
+            log.debug("downloading from remote for first sync: ", key);
+            val.decision = "downloadRemoteToLocal";
+          }
+        }
+
+        const syncCall = queue.add(async () => await syncIndividualItem(key, isDeleteOp, val, vaultRandomID, client, db, vault, localDeleteFunc, password));
 
         syncCall.catch((error) => {
           const message = `${key}: ${error.message}`;
@@ -1409,22 +1436,15 @@ export const doActualSync = async (
           }
         })
       }
-
-      const queueSize = queue.size + queue.pending;
-
-      queue.on('next', async () => {
-        if (callbackSyncProcess !== undefined) {
-          const unsyncedItems = queue.size + queue.pending;
-          await callbackSyncProcess(unsyncedItems, queueSize);
-        }
-      });
-
-      await queue.onIdle();
-
-      if (potentialErrors.length > 0) {
-        throw new AggregateError(potentialErrors);
-      }
     }
+  }
+
+  await queue.onIdle();
+
+  // Sync end
+
+  if (potentialErrors.length > 0) {
+    throw new AggregateError(potentialErrors);
   }
 
   log.debug(`start syncing extra data lastly`);

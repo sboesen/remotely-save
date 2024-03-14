@@ -13,7 +13,7 @@ export interface ObsConfigDirFileType {
 }
 
 const isFolderToSkip = (x: string) => {
-  let specialFolders = [".git", ".github", ".gitlab", ".svn", "node_modules"];
+  let specialFolders = [".git", ".github", ".gitlab", ".svn", "node_modules", ".DS_Store"];
   for (const iterator of specialFolders) {
     if (
       x === iterator ||
@@ -29,10 +29,10 @@ const isFolderToSkip = (x: string) => {
 
 const isPluginDirItself = (x: string, pluginId: string) => {
   return (
-    x === pluginId ||
-    x === `${pluginId}/` ||
-    x.endsWith(`/${pluginId}`) ||
-    x.endsWith(`/${pluginId}/`)
+    x === "remotely-secure" ||
+    x === "remotely-secure/" ||
+    x.endsWith("/remotely-secure") ||
+    x.endsWith("/remotely-secure/")
   );
 };
 
@@ -110,6 +110,7 @@ export const listFilesInObsFolder = async (
             if (isFolderToSkip(iter2)) {
               continue;
             }
+            
             if (isInsideSelfPlugin && !isLikelyPluginSubFiles(iter2)) {
               // special treatment for remotely-secure folder
               continue;

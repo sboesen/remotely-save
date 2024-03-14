@@ -61,3 +61,12 @@
   width: 350px;
   height: 350px;
 }
+
+/* !important isn't great practice but it needs to overwrite other css classes */
+.remotely-sync-hidden {
+  display: none !important; 
+}
+
+.remotely-sync-show-status-bar {
+  display: flex !important;
+}

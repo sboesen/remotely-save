@@ -5,7 +5,7 @@ import {
   Setting,
   setIcon,
   FileSystemAdapter,
-  Platform, TAbstractFile, Vault
+  Platform, TAbstractFile, Vault, EventRef,
 } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
 import type {
@@ -48,7 +48,7 @@ import { DEFAULT_S3_CONFIG } from "./remoteForS3";
 import { DEFAULT_WEBDAV_CONFIG } from "./remoteForWebdav";
 import { RemotelySaveSettingTab } from "./settings";
 import {fetchMetadataFile, parseRemoteItems, SyncPlanType, SyncStatusType} from "./sync";
-import { doActualSync, getSyncPlan, isPasswordOk, getMetadataPath } from "./sync";
+import { doActualSync, getSyncPlan, isPasswordOk, getMetadataFromRemoteFiles } from "./sync";
 import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
 import { ObsConfigDirFileType, listFilesInObsFolder } from "./obsFolderLister";
 import { I18n } from "./i18n";
@@ -87,8 +87,9 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   lang: "auto",
   logToDB: false,
   skipSizeLargerThan: -1,
-  enableStatusBarInfo: true,
-  lastSuccessSync: -1,
+  enableStatusBarInfo: undefined,
+  showLastSyncedOnly: undefined,
+  lastSynced: -1,
   trashLocal: false,
   syncTrash: false,
   syncBookmarks: true,
@@ -112,22 +113,25 @@ export default class RemotelySavePlugin extends Plugin {
   settings: RemotelySavePluginSettings;
   db: InternalDBs;
   syncStatus: SyncStatusType;
-  lastSynced: number;
+  syncStatusText?: string;
   statusBarElement: HTMLSpanElement;
   oauth2Info: OAuth2Info;
   currSyncMsg?: string;
-  syncingStatusText?: string;
   syncRibbon?: HTMLElement;
   autoRunIntervalID?: number;
-  syncOnSaveIntervalID?: number;
-  syncOnRemoteIntervalID?: any;
   i18n: I18n;
   vaultRandomID: string;
   isManual: boolean;
+  isAlreadyRunning: boolean;
+  syncOnSaveEvent?: EventRef;
   vaultScannerIntervalId?: number;
+  syncOnRemoteIntervalID?: number;
+  statusBarIntervalID: number;
+  statusBarObserver?: MutationObserver;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
-    this.isManual = triggerSource == "manual";
+    this.isManual = triggerSource === "manual";
+    this.isAlreadyRunning = false;
     const MAX_STEPS = this.settings.debugEnabled ? 8 : 2;
     await this.createTrashIfDoesNotExist();
 
@@ -136,24 +140,23 @@ export default class RemotelySavePlugin extends Plugin {
     };
 
     const getNotice = (x: string, step: number, timeout?: number) => {
-      // only show notices in manual mode
-      // no notice in auto mode
       if (this.isManual || triggerSource === "manual" || triggerSource === "dry") {
+        // Display mobile or desktop without status bar notices or if already running notice appears
         if (!this.settings.debugEnabled) {
-          // If not mobile and status bar enabled, return.
-          if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
-            return;
+          if (this.isAlreadyRunning || Platform.isMobile || !this.settings.enableStatusBarInfo) {
+            if (step === 1) {
+              new Notice("1/" + this.i18n.t("syncrun_step1", {
+                maxSteps: "2", serviceType: this.settings.serviceType
+              }), timeout);
+            } else if (step === 8) {
+              new Notice("2/" + this.i18n.t("syncrun_step8", {maxSteps: "2"}), timeout);
+            }
           }
-
-          // Rewrite step 8 to display as step 2
-          if (step == 8) {
-            step = 2;
-          } else if (step > 1 && step < 8) {
-            // Allow all errors ("step -1"). Otherwise skip steps 2 -> 7
-            return;
-          }
+          
+          return;
         }
-        // Add "step/x" in notice
+
+        // Display debug notices
         const prefix = step > -1 ? step + "/" : "";
         new Notice(prefix + x, timeout);
       }
@@ -162,16 +165,13 @@ export default class RemotelySavePlugin extends Plugin {
     // Make sure two syncs can't run at the same time
     if (this.syncStatus !== "idle") {
       if (triggerSource == "manual") {
-        new Notice(
-          "1/" + t("syncrun_alreadyrunning", {
-            maxSteps: `${MAX_STEPS}`,
-            pluginName: this.manifest.name,
-            syncStatus: this.syncStatus,
-          })
-        );
-
-        // If already running, report finished status as user tried to manually sync
-        this.isManual = true;
+        // Show notice for debug, mobile, or desktop
+        if (this.settings.debugEnabled) {
+          new Notice(t("syncrun_debug_alreadyrunning", {stage: this.syncStatus}));
+        } else {
+          new Notice("1/" + t("syncrun_alreadyrunning", {maxSteps: MAX_STEPS}));
+          this.isAlreadyRunning = true;
+        }
 
         log.debug(this.manifest.name, " already running in stage: ", this.syncStatus);
 
@@ -179,16 +179,12 @@ export default class RemotelySavePlugin extends Plugin {
           log.debug(this.currSyncMsg);
         }  
       }
-      
+
       return;
     }
 
-    let originLabel = this.getOriginLabel();
-
     try {
-      if (this.syncRibbon !== undefined) {
-        this.setSyncIconRunning(t, triggerSource);
-      }
+      this.setSyncIcon(true, triggerSource);
 
       // Step count will be wrong for dry mode, but that's fine. It already was off by 1
       if (triggerSource === "dry") {
@@ -205,16 +201,15 @@ export default class RemotelySavePlugin extends Plugin {
           serviceType: this.settings.serviceType,
         }), 1
       );
-      this.syncStatus = "preparing";
 
-      this.updateStatusBarText(t("syncrun_status_preparing"));
+      this.updateSyncStatus("preparing");
 
       getNotice(
         t("syncrun_step2", {
           maxSteps: `${MAX_STEPS}`,
         }), 2
       );
-      this.syncStatus = "getting_remote_files_list";
+      this.updateSyncStatus("getting_remote_files_list");
       const self = this;
       const client = this.getRemoteClient(self);
       const remoteRsp = await client.listFromRemote();
@@ -224,7 +219,8 @@ export default class RemotelySavePlugin extends Plugin {
           maxSteps: `${MAX_STEPS}`,
         }), 3
       );
-      this.syncStatus = "checking_password";
+
+      this.updateSyncStatus("checking_password");
       
       const passwordCheckResult = await isPasswordOk(
         remoteRsp.Contents,
@@ -240,7 +236,7 @@ export default class RemotelySavePlugin extends Plugin {
           maxSteps: `${MAX_STEPS}`,
         }), 4
       );
-      this.syncStatus = "getting_remote_extra_meta";
+      this.updateSyncStatus("getting_remote_extra_meta");
       const { remoteStates, metadataFile } = await this.parseRemoteItems(remoteRsp.Contents, client);
       const origMetadataOnRemote = await this.fetchMetadataFromRemote(metadataFile, client);
 
@@ -249,7 +245,7 @@ export default class RemotelySavePlugin extends Plugin {
           maxSteps: `${MAX_STEPS}`,
         }), 5
       );
-      this.syncStatus = "getting_local_meta";
+      this.updateSyncStatus("getting_local_meta");
       const local = this.app.vault.getAllLoadedFiles();
       const localHistory = await this.getLocalHistory();
       let localConfigDirContents: ObsConfigDirFileType[] = await listFilesInObsFolder(this.app.vault, this.manifest.name, this.settings.syncTrash);
@@ -259,7 +255,8 @@ export default class RemotelySavePlugin extends Plugin {
           maxSteps: `${MAX_STEPS}`,
         }), 6
       );
-      this.syncStatus = "generating_plan";
+
+      this.updateSyncStatus("generating_plan");
       const { plan, sortedKeys, deletions, sizesGoWrong } = await this.getSyncPlan(remoteStates, local, localConfigDirContents, origMetadataOnRemote, localHistory, client, triggerSource);
 
       await insertSyncPlanRecordByVault(this.db, plan, this.vaultRandomID);
@@ -274,10 +271,10 @@ export default class RemotelySavePlugin extends Plugin {
           }), 7
         );
 
-        this.syncStatus = "syncing";
+        this.updateSyncStatus("syncing");
         await this.doActualSync(client, plan, sortedKeys, metadataFile, origMetadataOnRemote, sizesGoWrong, deletions, self);
       } else {
-        this.syncStatus = "syncing";
+        this.updateSyncStatus("syncing");
         getNotice(
           t("syncrun_step7skip", {
             maxSteps: `${MAX_STEPS}`,
@@ -290,14 +287,16 @@ export default class RemotelySavePlugin extends Plugin {
           maxSteps: `${MAX_STEPS}`,
         }), 8
       );
-      this.syncStatus = "finish";
 
-      this.updateLastSyncTime();
-      this.syncingStatusText = undefined;
+      this.updateSyncStatus("finish");
 
-      this.lastSynced = await this.getMetadataMtime();
+      log.debug("start getting last synced from remote")
+      this.settings.lastSynced = await this.getMetadataMtime();
+      this.saveSettings();
+      log.debug("finish getting last synced from remote");
 
-      this.syncStatus = "idle";
+      this.updateSyncStatus("idle");
+      this.setSyncIcon(false);
     } catch (error) {
       const msg = t("syncrun_abort", {
         manifestID: this.manifest.id,
@@ -315,11 +314,8 @@ export default class RemotelySavePlugin extends Plugin {
       } else {
         getNotice(error.message, -1, 10 * 1000);
       }
-      this.syncStatus = "idle";
-      if (this.syncRibbon !== undefined) {
-        setIcon(this.syncRibbon, iconNameSyncWait);
-        this.syncRibbon.setAttribute("aria-label", originLabel);
-      }
+      this.updateSyncStatus("idle");
+      this.setSyncIcon(false);
     }
   }
 
@@ -331,7 +327,6 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   private shouldSyncBasedOnSyncPlan = async (syncPlan: SyncPlanType) => {
-
     for (const key in syncPlan.mixedStates) {
       const fileState = syncPlan.mixedStates[key];
 
@@ -341,26 +336,6 @@ export default class RemotelySavePlugin extends Plugin {
     }
     return false;
   };
-
-  private getOriginLabel() {
-    let originLabel = `${this.manifest.name}`;
-    if (this.syncRibbon !== undefined) {
-      originLabel = this.syncRibbon.getAttribute("aria-label");
-    }
-    return originLabel;
-  }
-
-  private updateLastSyncTime() {
-    this.settings.lastSuccessSync = Date.now();
-    this.saveSettings();
-
-    this.updateLastSuccessSyncMsg(this.settings.lastSuccessSync);
-
-    if (this.syncRibbon !== undefined) {
-      setIcon(this.syncRibbon, iconNameSyncWait);
-      this.syncRibbon.setAttribute("aria-label", this.getOriginLabel());
-    }
-  }
 
   private async doActualSync(client: RemoteClient, plan: SyncPlanType, sortedKeys: string[], metadataFile: FileOrFolderMixedState, origMetadataOnRemote: MetadataOnRemote, sizesGoWrong: FileOrFolderMixedState[], deletions: DeletionOnRemote[], self: this) {
     await doActualSync(
@@ -376,6 +351,7 @@ export default class RemotelySavePlugin extends Plugin {
       deletions,
       (key: string) => self.trash(key),
       this.settings.password,
+      this.settings.lastSynced,
       this.settings.concurrency,
       (ss: FileOrFolderMixedState[]) => {
         new SizesConflictModal(
@@ -386,8 +362,7 @@ export default class RemotelySavePlugin extends Plugin {
           this.settings.password !== ""
         ).open();
       },
-      (i: number, totalCount: number) =>
-        self.setCurrSyncMsg(i, totalCount)
+      (i: number, total: number) => self.updateStatusBar({i, total})
     );
   }
 
@@ -458,15 +433,71 @@ export default class RemotelySavePlugin extends Plugin {
     return client;
   }
 
-  private setSyncIconRunning(t: (x: TransItemType, vars?: any) => string, triggerSource: "manual" | "auto" | "dry" | "autoOnceInit") {
-    setIcon(this.syncRibbon, iconNameSyncRunning);
-    this.syncRibbon.setAttribute(
-      "aria-label",
-      t("syncrun_syncingribbon", {
-        pluginName: this.manifest.name,
-        triggerSource: triggerSource,
-      })
-    );
+  private updateSyncStatus(status: SyncStatusType) {
+    this.syncStatus = status;
+    this.updateStatusBar();
+  }
+
+  private setSyncIcon(running: boolean, triggerSource?: "manual" | "auto" | "dry" | "autoOnceInit") {
+    if (this.syncRibbon === undefined) {
+      return;
+    }
+
+    if (running) {
+      setIcon(this.syncRibbon, iconNameSyncRunning);
+
+      this.syncRibbon.setAttribute(
+        "aria-label",
+        this.i18n.t("syncrun_syncingribbon", {
+          pluginName: this.manifest.name,
+          triggerSource: triggerSource,
+        })
+      );
+    } else {
+      setIcon(this.syncRibbon, iconNameSyncWait);
+      
+      this.syncRibbon.setAttribute("aria-label", this.manifest.name);
+    }
+  }
+
+  private updateStatusBar(syncQueue?: {i: number, total: number}) {
+    const enabled = this.statusBarElement !== undefined && 
+      this.settings.enableStatusBarInfo === true;
+
+    // Update status text
+    if (this.syncStatus === "idle") {
+      const lastSynced = getLastSynced(this.i18n, this.settings.lastSynced);
+      this.syncStatusText = lastSynced.lastSyncMsg;
+
+      if (enabled) {
+        this.statusBarElement.setAttribute("aria-label", lastSynced.lastSyncLabelMsg);
+      }
+    } 
+    
+    if (this.syncStatus === "preparing") {
+      this.syncStatusText = this.i18n.t("syncrun_status_preparing");
+    }
+
+    if (this.syncStatus === "syncing") {
+      if (syncQueue !== undefined) {
+        this.syncStatusText = this.i18n.t("syncrun_status_progress", {
+          current: syncQueue.i.toString(),
+          total: syncQueue.total.toString()
+        });  
+      } else {
+        this.syncStatusText = this.i18n.t("syncrun_status_syncing");
+      }
+    }
+
+    if (enabled) {
+      this.statusBarElement.setText(this.syncStatusText);
+    }
+  }
+
+  async promptAgreement(): Promise<boolean> {
+    return new Promise((resolve) => {
+      new SyncAlgoV2Modal(this.app, this.i18n, (result) => resolve(result)).open();
+    });
   }
 
   async onload() {
@@ -491,6 +522,19 @@ export default class RemotelySavePlugin extends Plugin {
     const t = (x: TransItemType, vars?: any) => {
       return this.i18n.t(x, vars);
     };
+
+    // Check if they have agreed to uploading metadata
+    if (!this.settings.agreeToUploadExtraMetadata) {
+      const agreed = await this.promptAgreement();
+
+      if (agreed) {
+        this.settings.agreeToUploadExtraMetadata = true;
+        await this.saveSettings();
+      } else {
+        this.unload();
+        return;
+      }
+    }
 
     if (this.settings.debugEnabled) {
       log.setLevel("debug");
@@ -525,8 +569,6 @@ export default class RemotelySavePlugin extends Plugin {
 
     // must AFTER preparing DB
     this.enableAutoClearSyncPlanHist();
-
-    this.syncStatus = "idle";
 
     this.registerEvent(
       this.app.vault.on("delete", async (fileOrFolder) => {
@@ -742,18 +784,6 @@ export default class RemotelySavePlugin extends Plugin {
       async () => this.syncRun("manual")
     );
 
-    if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
-      const statusBarItem = this.addStatusBarItem();
-      this.statusBarElement = statusBarItem.createEl("span");
-      this.statusBarElement.setAttribute("aria-label-position", "top");
-
-      this.updateLastSuccessSyncMsg(this.settings.lastSuccessSync);
-      // update statusbar text every 30 seconds
-      this.registerInterval(window.setInterval(() => {
-        this.updateLastSuccessSyncMsg(this.settings.lastSuccessSync);
-      }, 1000 * 30));
-    }
-
     this.addCommand({
       id: "start-sync",
       name: t("command_startsync"),
@@ -816,42 +846,41 @@ export default class RemotelySavePlugin extends Plugin {
       },
     });
 
-    if (Platform.isDesktop === false) {
-      this.addCommand({
-        id: "get-sync-status",
-        name: t("command_syncstatus"),
-        icon: iconNameStatusBar,
-        callback: async () => {
-          if (this.syncStatus === "idle") {
-            new Notice(getLastSynced(this.i18n, this.settings.lastSuccessSync).lastSyncMsg);
-          } else if (this.syncStatus === "syncing") {
-            if (this.syncingStatusText !== undefined) {
-              new Notice(this.syncingStatusText);
-            } else {
-              new Notice(t("syncrun_status_preparing"));
-            }
-          } else {
-            new Notice(t("syncrun_status_preparing"));
-          }
-        },
-      });
+    this.addCommand({
+      id: "get-sync-status",
+      name: t("command_syncstatus"),
+      icon: iconNameStatusBar,
+      callback: () => new Notice(this.syncStatusText)
+    });
+    
+    this.addSettingTab(new RemotelySaveSettingTab(this.app, this));
+
+    // Show status bar show by default on desktop only
+    if (this.settings.enableStatusBarInfo === undefined) {
+      this.settings.enableStatusBarInfo = Platform.isMobile ? false : true;
     }
 
-    this.addSettingTab(new RemotelySaveSettingTab(this.app, this));
+    // Hide all other elements in status bar by default on mobile only
+    if (this.settings.showLastSyncedOnly === undefined) {
+      this.settings.showLastSyncedOnly = Platform.isMobile ? true : false;
+    }
+
+    this.saveSettings();
 
     // this.registerDomEvent(document, "click", (evt: MouseEvent) => {
     //   log.info("click", evt);
     // });
 
-    if (!this.settings.agreeToUploadExtraMetadata) {
-      const syncAlgoV2Modal = new SyncAlgoV2Modal(this.app, this);
-      syncAlgoV2Modal.open();
-    } else {
-      this.enableAutoSyncIfSet();
-      this.enableInitSyncIfSet();
-      this.enableSyncOnSaveIfSet();
-      this.toggleSyncOnRemote(true);
-    }
+    this.enableAutoSyncIfSet();
+    this.enableInitSyncIfSet();
+
+    this.toggleSyncOnRemote(true);
+    this.toggleSyncOnSave(true);
+    this.toggleStatusBar(true);
+    this.toggleStatusText(true);
+    this.toggleStatusBarObserver(true);
+
+    this.updateSyncStatus("idle");
   }
 
   async onunload() {
@@ -860,9 +889,13 @@ export default class RemotelySavePlugin extends Plugin {
       this.oauth2Info.helperModal = undefined;
       this.oauth2Info = undefined;
     }
-    
-    // Clear intervals
+
+    // Disable Features
+    this.toggleSyncOnSave(false);
     this.toggleSyncOnRemote(false);
+    this.toggleStatusText(false);
+    this.toggleStatusBar(false);
+    this.toggleStatusBarObserver(false);
   }
 
   async loadSettings() {
@@ -1036,62 +1069,68 @@ export default class RemotelySavePlugin extends Plugin {
     this.vaultRandomID = vaultRandomID;
   }
 
-  enableSyncOnSaveIfSet() {
-    if (
-      this.settings.syncOnSaveAfterMilliseconds !== undefined &&
-      this.settings.syncOnSaveAfterMilliseconds !== null &&
-      this.settings.syncOnSaveAfterMilliseconds > 0
-    ) {
-      let runScheduled = false;
-      this.app.workspace.onLayoutReady(() => {
-        const intervalIDVaultScanner = window.setInterval(async () => {
-          let plan = await this.getSyncPlan2();
-          if (await this.shouldSyncBasedOnSyncPlan(plan)) {
-            if (!runScheduled) {
-              log.debug(`schedule a run for ${this.settings.syncOnSaveAfterMilliseconds} milliseconds later`)
-              runScheduled = true
-              setTimeout(() => {
-                  this.syncRun("auto")
-                  runScheduled = false
-                },
-                this.settings.syncOnSaveAfterMilliseconds
-              )
-            }
-          }
-        }, this.settings.syncOnSaveAfterMilliseconds * 100); // More expensive scan, so lookup less frequently
-        this.vaultScannerIntervalId = intervalIDVaultScanner;
-        this.registerInterval(intervalIDVaultScanner);
+  // Needed to update text for get command
+  toggleStatusText(enabled: boolean) {
+    // Clears the current interval
+    if (this.statusBarIntervalID !== undefined) {
+      window.clearInterval(this.statusBarIntervalID);
+      this.statusBarIntervalID = undefined;
+    }
 
-        const intervalIDSyncOnSave = window.setInterval(async () => {
-          const currentFile = this.app.workspace.getActiveFile();
-          if (currentFile) {
-            // get the last modified time of the current file
-            // if it has been modified within the last syncOnSaveAfterMilliseconds
-            // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
-            const lastModified = currentFile.stat.mtime;
-            const currentTime = Date.now();
-            if (currentTime - lastModified < this.settings.syncOnSaveAfterMilliseconds) {
-              if (!runScheduled) {
-                const scheduleTimeFromNow = this.settings.syncOnSaveAfterMilliseconds - (currentTime - lastModified)
-                log.debug(`schedule a run for ${scheduleTimeFromNow} milliseconds later`)
-                runScheduled = true
-                setTimeout(() => {
-                    this.syncRun("auto")
-                    runScheduled = false
-                  },
-                  scheduleTimeFromNow
-                )
-              }
-            }
-          }
-        }, 1_000);
-        this.syncOnSaveIntervalID = intervalIDSyncOnSave;
-        this.registerInterval(intervalIDSyncOnSave);
-      });
+    // Set up interval
+    if (enabled) {
+      this.statusBarIntervalID = window.setInterval(async () => {
+        if (this.syncStatus !== "syncing") {
+          this.updateStatusBar();
+        }
+      }, 30_000);
+
+      this.updateStatusBar();
     }
   }
 
-  toggleSyncOnRemote(enabled: boolean) {
+  toggleStatusBar(enabled: boolean) {  
+    this.statusBarElement?.remove();
+
+    const statusBar = document.getElementsByClassName("status-bar")[0] as HTMLElement;
+
+    // Remove any remotely sync classes
+    statusBar.removeClass("remotely-sync-show-status-bar");
+    statusBar.style.marginBottom = "0px";
+
+    Array.from(statusBar.children).forEach((element) => {
+      element.removeClass("remotely-sync-hidden");
+    });
+
+    if (enabled && this.settings.enableStatusBarInfo) {
+      // Enable status bar on mobile
+      if (Platform.isMobile) {
+        statusBar.addClass("remotely-sync-show-status-bar");
+        
+        // Shifts up the status bar on phone to not cover the navmenu
+        if (Platform.isPhone) {
+          const navBar = document.getElementsByClassName("mobile-navbar")[0] as HTMLElement;
+          const height = window.getComputedStyle(navBar).getPropertyValue('height');
+          statusBar.style.marginBottom = height;
+        }
+      }
+
+      // Hide every element if set
+      if (this.settings.showLastSyncedOnly)  {
+        Array.from(statusBar.children).forEach((element) => {
+          (element as HTMLElement).addClass("remotely-sync-hidden");
+        });
+      }
+
+      // Create remotely sync element
+      this.statusBarElement = this.addStatusBarItem();
+      this.statusBarElement.createEl("span");
+      this.statusBarElement.setAttribute("data-tooltip-position", "top");    
+      this.updateStatusBar(); 
+    }
+  }
+
+  async toggleSyncOnRemote(enabled: boolean) {
     // Clears the current interval
     if (this.syncOnRemoteIntervalID !== undefined) {
       window.clearInterval(this.syncOnRemoteIntervalID);
@@ -1102,35 +1141,154 @@ export default class RemotelySavePlugin extends Plugin {
       return;
     }
 
-    const interval = window.setInterval(async () => {
-      // Tries to prevent it from running multiple setIntervals
-      if (this.syncStatus !== "idle" || this.syncOnRemoteIntervalID !== interval) {
+    let checkingMetadata = false;
+
+    const syncOnRemote = async () => {
+      if (this.syncStatus !== "idle" || checkingMetadata) {
         return;
       }
 
+      checkingMetadata = true;
       const metadataMtime = await this.getMetadataMtime();
+      checkingMetadata = false;
 
-      if (metadataMtime !== this.lastSynced) {
-        log.debug("Sync on Remote ran | Remote Metadata:", metadataMtime + ", Last Synced:", this.lastSynced);
-        this.syncRun("auto");
+      if (metadataMtime === undefined) {
+        return false;
       }
-    }, this.settings.syncOnRemoteChangesAfterMilliseconds);
 
-    this.syncOnRemoteIntervalID = interval;
+      if (metadataMtime !== this.settings.lastSynced) {
+        log.debug("Sync on Remote ran | Remote Metadata:", metadataMtime + ", Last Synced:", this.settings.lastSynced);
+        this.syncRun("auto");
+        return true;
+      }
+    };
+
+    if (Platform.isMobileApp) {
+      const onLoadResult = await syncOnRemote();
+      new Notice(onLoadResult === true ? this.i18n.t("remote_changes_found") : this.i18n.t("remote_changes_synced"));
+    }
+
+    this.syncOnRemoteIntervalID = window.setInterval(syncOnRemote, this.settings.syncOnRemoteChangesAfterMilliseconds);
+  }
+
+  async toggleSyncOnSave(enabled: boolean) {
+    let alreadyScheduled = false;
+
+    // Unregister vault change event
+    if (this.syncOnSaveEvent !== undefined) {
+      this.app.vault.offref(this.syncOnSaveEvent);
+      this.syncOnSaveEvent = undefined;
+    }
+
+    // Unregister scanning for .obsidian changes
+    if (this.vaultScannerIntervalId !== undefined) {
+      window.clearInterval(this.vaultScannerIntervalId);
+      this.vaultScannerIntervalId = undefined;
+    }
+
+    if (enabled === false || this.settings.syncOnSaveAfterMilliseconds === -1) {
+      return;
+    }
+    
+    // Register vault change event
+    this.syncOnSaveEvent = this.app.vault.on("modify", () => {
+      if (this.syncStatus !== "idle" || alreadyScheduled) {
+        return;
+      }
+
+      alreadyScheduled = true;
+      log.debug(`Scheduled a sync run for ${this.settings.syncOnSaveAfterMilliseconds} milliseconds later`);
+
+      setTimeout(async () => {
+        log.debug("Sync on save ran");
+        await this.syncRun("auto");  
+        alreadyScheduled = false;
+      }, this.settings.syncOnSaveAfterMilliseconds);
+    });
+
+    // Scan vault for config directory changes
+    const scanVault = async () => {
+      if (this.syncStatus !== "idle" || alreadyScheduled || !this.settings.syncConfigDir) {
+        return;
+      }
+
+      log.debug("Scanning config directory for changes");
+
+      let localConfigContents: ObsConfigDirFileType[] = await listFilesInObsFolder(this.app.vault, this.manifest.id, this.settings.syncTrash);
+
+      for (let i = 0; i < localConfigContents.length; i++) {
+        const file = localConfigContents[i];
+
+        if (file.key.includes(".obsidian/plugins/remotely-secure/")) {
+          continue;
+        }
+
+        if (file.mtime > this.settings.lastSynced) {
+          log.debug("Unsynced config file found: ", file.key)
+          alreadyScheduled = true;
+          log.debug(`Scheduled a sync run for ${this.settings.syncOnSaveAfterMilliseconds} milliseconds later`);
+
+          setTimeout(async () => {
+            log.debug("Sync on save ran");
+            await this.syncRun("auto");  
+            alreadyScheduled = false;
+          }, this.settings.syncOnSaveAfterMilliseconds);
+
+          break;
+        }
+      }
+    }
+
+    // Scans every 60 seconds
+    this.vaultScannerIntervalId = window.setInterval(scanVault, 30_000);
+  }
+
+  toggleStatusBarObserver(enabled: boolean) {
+    this.statusBarObserver?.disconnect();
+    this.statusBarObserver = undefined;
+
+    // Refresh status bar if new elements are found only if show only last synced is set.
+    if (enabled && this.settings.showLastSyncedOnly) {
+      this.statusBarObserver = new MutationObserver((mutationList, observer) => {
+        let shouldCall = false;
+        let byPlugin = false;
+
+        for (const mutation of mutationList) {
+          if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+            shouldCall = true;
+          }
+
+          mutation.addedNodes.forEach((node) => {
+            if ((node as Element).className === "status-bar-item plugin-remotely-secure") {
+              byPlugin = true;
+            }
+          })
+        }
+      
+        if (shouldCall && !byPlugin) {
+          log.debug("Status bar item added, refreshing status bar.")
+          this.toggleStatusBar(true);
+        }
+      });
+
+      const statusBar = document.getElementsByClassName("status-bar")[0];
+      this.statusBarObserver.observe(statusBar, { childList: true});
+    }
   }
   
   async getMetadataMtime() {
     const client = this.getRemoteClient(this);
-
-    const remoteRsp = await client.listFromRemote();
-    const {remoteStates, metadataFile} = await this.parseRemoteItems(remoteRsp.Contents, client);
-    const metadataPath = await getMetadataPath(metadataFile, this.settings.password);
-
-    if (metadataPath == undefined) {
-      return undefined;
-    }
     
-    return (await client.getMetadataFromRemote(metadataPath)).lastModified;
+    const remoteFiles = await client.listFromRemote();
+    const remoteMetadataFile = await getMetadataFromRemoteFiles(remoteFiles.Contents, this.settings.password);
+
+    const lastSynced = remoteMetadataFile.lastModified;
+
+    if (lastSynced === undefined && this.settings.lastSynced !== undefined) {
+      return this.settings.lastSynced;
+    }
+
+    return lastSynced;
   }
 
   private async getSyncPlan2() {
@@ -1185,42 +1343,6 @@ export default class RemotelySavePlugin extends Plugin {
         }, this.settings.initRunAfterMilliseconds);
       });
     }
-  }
-
-  async saveAgreeToUseNewSyncAlgorithm() {
-    this.settings.agreeToUploadExtraMetadata = true;
-    await this.saveSettings();
-  }
-
-  async setCurrSyncMsg(
-    i: number,
-    totalCount: number
-  ) {
-    const text = this.i18n.t("syncrun_status_progress", {
-      current: i.toString(),
-      total: totalCount.toString()
-    });
-
-    this.syncingStatusText = text;
-
-    this.updateStatusBarText(text);
-  }
-
-  updateStatusBarText(statusText: string) {
-    if (this.statusBarElement === undefined) return;
-    if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
-      this.statusBarElement.setText(statusText);
-    }
-  }
-
-  // TODO: Refactor this into misc.ts or elsewhere
-  updateLastSuccessSyncMsg(lastSuccessSyncMillis?: number) {
-    if (this.statusBarElement === undefined) return;
-
-    const lastSynced = getLastSynced(this.i18n, lastSuccessSyncMillis);
-
-    this.statusBarElement.setText(lastSynced.lastSyncMsg);
-    this.statusBarElement.setAttribute("aria-label", lastSynced.lastSyncLabelMsg);
   }
 
   /**

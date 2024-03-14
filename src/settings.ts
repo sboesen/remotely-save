@@ -60,6 +60,7 @@ import {getMetadataFiles, uploadExtraMeta} from "./sync";
 class PasswordModal extends Modal {
   plugin: RemotelySavePlugin;
   newPassword: string;
+
   constructor(app: App, plugin: RemotelySavePlugin, newPassword: string) {
     super(app);
     this.plugin = plugin;
@@ -200,7 +201,7 @@ class ChangeRemoteBaseDirModal extends Modal {
           button.onClick(async () => {
             this.plugin.settings[this.service].remoteBaseDir =
               this.newRemoteBaseDir;
-            this.plugin.settings.lastSuccessSync = -1;
+            this.plugin.settings.lastSynced = -1;
             await this.plugin.saveSettings();
             new Notice(t("modal_remotebasedir_notice"));
             this.close();
@@ -653,10 +654,12 @@ const wrapTextWithPasswordHide = (text: TextComponent) => {
 
 export class RemotelySaveSettingTab extends PluginSettingTab {
   readonly plugin: RemotelySavePlugin;
+  deletingRemoteMeta: boolean;
 
   constructor(app: App, plugin: RemotelySavePlugin) {
     super(app, plugin);
     this.plugin = plugin;
+    this.deletingRemoteMeta = false;
   }
 
   display(): void {
@@ -1514,9 +1517,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .setDesc(t("settings_saverun_desc"))
       .addDropdown((dropdown) => {
         dropdown.addOption("-1", t("settings_saverun_notset"));
-        dropdown.addOption(`${1000 * 1}`, t("settings_saverun_1sec"));
+        dropdown.addOption("0", t("settings_saverun_instant"));
         dropdown.addOption(`${1000 * 5}`, t("settings_saverun_5sec"));
         dropdown.addOption(`${1000 * 10}`, t("settings_saverun_10sec"));
+        dropdown.addOption(`${1000 * 30}`, t("settings_saverun_30sec"));
         dropdown.addOption(`${1000 * 60}`, t("settings_saverun_1min"));
         let runScheduled = false
         dropdown
@@ -1524,47 +1528,16 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           .onChange(async (val: string) => {
             const realVal = parseInt(val);
             this.plugin.settings.syncOnSaveAfterMilliseconds = realVal;
-            await this.plugin.saveSettings();
-            if (
-              (realVal === undefined || realVal === null || realVal <= 0) &&
-              this.plugin.syncOnSaveIntervalID !== undefined
-            ) {
-              // clear
-              window.clearInterval(this.plugin.syncOnSaveIntervalID);
-              this.plugin.syncOnSaveIntervalID = undefined;
-            } else if (
-              realVal !== undefined &&
-              realVal !== null &&
-              realVal > 0
-            ) {
-              const intervalID = window.setInterval(() => {
-                const currentFile = this.app.workspace.getActiveFile();
 
-                if (currentFile) {
-                  // get the last modified time of the current file
-                  // if it has been modified within the last syncOnSaveAfterMilliseconds
-                  // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
-                  const lastModified = currentFile.stat.mtime;
-                  const currentTime = Date.now();
-                  if (currentTime - lastModified < this.plugin.settings.syncOnSaveAfterMilliseconds) {
-                    if (!runScheduled) {
-                      const scheduleTimeFromNow = this.plugin.settings.syncOnSaveAfterMilliseconds - (currentTime - lastModified)
-                      runScheduled = true
-                      setTimeout(() => {
-                        this.plugin.syncRun("auto")
-                        runScheduled = false
-                      },
-                        scheduleTimeFromNow
-                      )
-                    }
-                  }
-                }
-              }, realVal);
-              this.plugin.syncOnSaveIntervalID = intervalID;
-              this.plugin.registerInterval(intervalID);
+            await this.plugin.saveSettings();
+
+            if (realVal < 0) {
+              this.plugin.toggleSyncOnSave(false);
+            } else {
+              this.plugin.toggleSyncOnSave(true);
             }
-          });
-      });
+          })
+    });
 
     new Setting(basicDiv)
     .setName(t("settings_remoterun"))
@@ -1676,21 +1649,44 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
-    // custom status bar items is not supported on mobile
-    if (!Platform.isMobileApp) {
-      new Setting(basicDiv)
-        .setName(t("settings_enablestatusbar_info"))
-        .setDesc(t("settings_enablestatusbar_info_desc"))
-        .addToggle((toggle) => {
-          toggle
-            .setValue(this.plugin.settings.enableStatusBarInfo)
-            .onChange(async (val) => {
-              this.plugin.settings.enableStatusBarInfo = val;
-              await this.plugin.saveSettings();
-              new Notice(t("settings_enablestatusbar_reloadrequired_notice"));
-            });
+    new Setting(basicDiv)
+      .setName(t("settings_enablestatusbar_info"))
+      .setDesc(t("settings_enablestatusbar_info_desc"))
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.enableStatusBarInfo)
+          .onChange(async (val) => {
+            this.plugin.settings.enableStatusBarInfo = val;
+            await this.plugin.saveSettings();
+            this.plugin.toggleStatusBar(val);
+
+            statusBarOptions.toggleClass(
+              "remotely-sync-hidden",
+              this.plugin.settings.enableStatusBarInfo !== true
+            );
+          });
+      });
+
+    const statusBarOptions = basicDiv.createDiv({ cls: "remotely-sync-hidden" });
+
+    statusBarOptions.toggleClass(
+      "remotely-sync-hidden",
+      this.plugin.settings.enableStatusBarInfo !== true
+    );
+
+    new Setting(statusBarOptions)
+    .setName(t("settings_showlastsyncedonly"))
+    .setDesc(t("settings_showlastsyncedonly_desc"))
+    .addToggle((toggle) => {
+      toggle
+        .setValue(this.plugin.settings.showLastSyncedOnly)
+        .onChange(async (val) => {
+          this.plugin.settings.showLastSyncedOnly = val;
+          await this.plugin.saveSettings();
+          this.plugin.toggleStatusBar(true);
+          this.plugin.toggleStatusBarObserver(val);
         });
-    }
+    });
 
     new Setting(basicDiv)
       .setName(t("settings_trash_locally"))
@@ -1882,6 +1878,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.onClick(async () => {
           const c = messyConfigToNormal(await this.plugin.loadData());
           new Notice(t("settings_outputsettingsconsole_notice"));
+          console.log(c);
         });
       });
 
@@ -2025,6 +2022,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             new Notice(t("settings_enablestatusbar_reloadrequired_notice"));
           });
       });
+
     new Setting(debugDiv)
       .setName(t("settings_reset_sync_metadata"))
       .setDesc(t("settings_reset_sync_metadata_desc"))
@@ -2032,6 +2030,16 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText(t("settings_reset_button"));
         button.onClick(async () => {
           // Delete all remote metadata file(s) and upload empty one.
+          if (this.deletingRemoteMeta) {
+            new Notice(t("settings_reset_sync_metadata_notice_error"));
+            return;
+          }
+
+          new Notice(t("settings_reset_sync_metadata_notice_start"))
+          log.debug("Deleting remote metadata file. (1/2)")
+
+          this.deletingRemoteMeta = true;
+
           await this.deleteRemoteMetadata();
           await uploadExtraMeta(this.getClient(),
             this.app.vault,
@@ -2040,7 +2048,11 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             [],
             [],
             this.plugin.settings.password );
-          new Notice(t("settings_reset_sync_metadata_notice"));
+            
+          this.deletingRemoteMeta = false;
+          
+          new Notice(t("settings_reset_sync_metadata_notice_end"));
+          log.debug("Remote metadata file deleted. (2/2)")
         });
       });
   }
@@ -2050,12 +2062,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     let remoteFiles = await client.listFromRemote();
     let remoteMetadataFiles = await getMetadataFiles(remoteFiles.Contents, this.plugin.settings.password)
 
-
     for (const metadataFile of remoteMetadataFiles) {
       await client.deleteFromRemote(DEFAULT_FILE_NAME_FOR_METADATAONREMOTE,
         this.plugin.settings.password,
         metadataFile);
-
     }
   }
 

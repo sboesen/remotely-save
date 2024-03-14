@@ -1,46 +1,43 @@
-import { App, Modal, Notice, PluginSettingTab, Setting } from "obsidian";
-import type RemotelySavePlugin from "./main"; // unavoidable
-import type { TransItemType } from "./i18n";
-
-import { log } from "./moreOnLog";
+import { App, Modal, Setting } from "obsidian";
+import type { I18n } from "./i18n";
 
 export class SyncAlgoV2Modal extends Modal {
-  agree: boolean;
-  readonly plugin: RemotelySavePlugin;
-  constructor(app: App, plugin: RemotelySavePlugin) {
+  result: boolean;
+  onSubmit: (result: boolean) => void;
+  i18n: I18n;
+
+  constructor(app: App, i18n: I18n, onSubmit: (result: boolean) => void) {
     super(app);
-    this.plugin = plugin;
-    this.agree = false;
+    this.i18n = i18n;
+    this.result = false;
+    this.onSubmit = onSubmit;
   }
+
   onOpen() {
     let { contentEl } = this;
-    const t = (x: TransItemType, vars?: any) => {
-      return this.plugin.i18n.t(x, vars);
-    };
 
     contentEl.createEl("h2", {
-      text: t("syncalgov2_title"),
+      text: this.i18n.t("syncalgov2_title"),
     });
 
-    const ul = contentEl.createEl("ul");
-    t("syncalgov2_texts")
+    this.i18n.t("syncalgov2_texts")
       .split("\n")
       .forEach((val) => {
-        ul.createEl("li", {
+        contentEl.createEl("p", {
           text: val,
         });
       });
 
     new Setting(contentEl)
       .addButton((button) => {
-        button.setButtonText(t("syncalgov2_button_agree"));
+        button.setButtonText(this.i18n.t("syncalgov2_button_agree"));
         button.onClick(async () => {
-          this.agree = true;
+          this.result = true;
           this.close();
         });
       })
       .addButton((button) => {
-        button.setButtonText(t("syncalgov2_button_disagree"));
+        button.setButtonText(this.i18n.t("syncalgov2_button_disagree"));
         button.onClick(() => {
           this.close();
         });
@@ -50,13 +47,7 @@ export class SyncAlgoV2Modal extends Modal {
   onClose() {
     let { contentEl } = this;
     contentEl.empty();
-    if (this.agree) {
-      this.plugin.saveAgreeToUseNewSyncAlgorithm();
-      this.plugin.enableAutoSyncIfSet();
-      this.plugin.enableInitSyncIfSet();
-      this.plugin.enableSyncOnSaveIfSet();
-    } else {
-      this.plugin.unload();
-    }
+
+    this.onSubmit(this.result);
   }
 }
