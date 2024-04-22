@@ -156,6 +156,57 @@ export const getMetadataFromRemoteFiles = async(
   }
 }
 
+export const getRemoteMetadata = async (
+  remote: RemoteItem[],
+  client: RemoteClient,
+  password: string = "",
+): Promise<FileOrFolderMixedState> => {
+  if (remote === undefined) {
+    return undefined;
+  }
+
+  // Get all metadata files
+  let metadataFiles: RemoteItem[] = [];
+
+  for (const entry of remote) {
+    const remoteEncryptedKey = entry.key;
+
+    let key = remoteEncryptedKey;
+
+    if (password !== "") {
+      key = await decryptBase64urlToString(remoteEncryptedKey, password);
+    }
+
+    if (key == DEFAULT_FILE_NAME_FOR_METADATAONREMOTE) {
+      metadataFiles.push(Object.assign({}, entry));
+    }
+  }
+
+  // Delete older duplicate metadata files.
+  if (metadataFiles.length > 1) {
+    metadataFiles = metadataFiles.sort((a, b) => b.lastModified - a.lastModified);
+    
+    metadataFiles.forEach(async (file, index) => {
+      if (index !== 0) {
+        await client.deleteFromRemote(DEFAULT_FILE_NAME_FOR_METADATAONREMOTE, password, file.key);
+      }
+    });
+  }
+
+  // Return the latest modified metadata file
+  return metadataFiles[0];
+}
+
+export const getRemoteStates = async (
+  remote: RemoteItem[],
+  db: InternalDBs,
+  vaultRandomID: string,
+  remoteType: SUPPORTED_SERVICES_TYPE,
+  password: string = ""
+) => {
+  
+}
+
 export const parseRemoteItems = async (
   remote: RemoteItem[],
   db: InternalDBs,

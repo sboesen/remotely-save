@@ -47,7 +47,7 @@ import {
 import { DEFAULT_S3_CONFIG } from "./remoteForS3";
 import { DEFAULT_WEBDAV_CONFIG } from "./remoteForWebdav";
 import { RemotelySaveSettingTab } from "./settings";
-import {fetchMetadataFile, parseRemoteItems, SyncPlanType, SyncStatusType} from "./sync";
+import { getRemoteMetadata, parseRemoteItems, SyncPlanType, SyncStatusType } from "./sync";
 import { doActualSync, getSyncPlan, isPasswordOk, getMetadataFromRemoteFiles } from "./sync";
 import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
 import { ObsConfigDirFileType, listFilesInObsFolder } from "./obsFolderLister";
@@ -236,7 +236,12 @@ export default class RemotelySavePlugin extends Plugin {
         }), 4
       );
       this.updateSyncStatus("getting_remote_extra_meta");
+
+      const testmeta = await getMetadataFile(remoteRsp.Contents, client, this.settings.password);
+      const testStates = await getREmoteStates
+
       const { remoteStates, metadataFile } = await this.parseRemoteItems(remoteRsp.Contents, client);
+
       const origMetadataOnRemote = await this.fetchMetadataFromRemote(metadataFile, client);
 
       getNotice(
@@ -244,6 +249,7 @@ export default class RemotelySavePlugin extends Plugin {
           maxSteps: `${MAX_STEPS}`,
         }), 5
       );
+
       this.updateSyncStatus("getting_local_meta");
       const local = this.app.vault.getAllLoadedFiles();
       const localHistory = await this.getLocalHistory();
