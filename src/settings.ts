@@ -2025,6 +2025,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           this.deletingRemoteMeta = true;
 
           await this.deleteRemoteMetadata();
+
           await uploadExtraMeta(this.getClient(),
             this.app.vault,
             undefined,
@@ -2041,9 +2042,9 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
   }
 
   private async deleteRemoteMetadata() {
-    let client = this.getClient();
-    let remoteFiles = await client.listFromRemote();
-    let remoteMetadata = await getRemoteMetadata(remoteFiles.Contents, client, this.plugin.settings.password)
+    const client = this.getClient();
+    const remoteFiles = await client.listFromRemote();
+    const remoteMetadata = await getRemoteMetadata(remoteFiles.Contents, client, this.plugin.settings.password)
 
     await client.deleteFromRemote(DEFAULT_FILE_NAME_FOR_METADATAONREMOTE, this.plugin.settings.password, remoteMetadata.remoteEncryptedKey);
   }

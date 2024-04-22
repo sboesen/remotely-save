@@ -159,7 +159,7 @@ export const getRemoteMetadata = async (
     
     metadataFiles.forEach(async (file, index) => {
       if (index !== 0) {
-        await client.deleteFromRemote(DEFAULT_FILE_NAME_FOR_METADATAONREMOTE, password, file.key);
+        await client.deleteFromRemote(DEFAULT_FILE_NAME_FOR_METADATAONREMOTE, password, file.remoteEncryptedKey);
       }
     });
   }
