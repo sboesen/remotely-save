@@ -160,13 +160,12 @@ export const getRemoteMetadata = async (
   remote: RemoteItem[],
   client: RemoteClient,
   password: string = "",
-): Promise<FileOrFolderMixedState> => {
-  if (remote === undefined) {
+) => {
+  if (remote === undefined)
     return undefined;
-  }
 
   // Get all metadata files
-  let metadataFiles: RemoteItem[] = [];
+  let metadataFiles: FileOrFolderMixedState[] = [];
 
   for (const entry of remote) {
     const remoteEncryptedKey = entry.key;
@@ -178,13 +177,22 @@ export const getRemoteMetadata = async (
     }
 
     if (key == DEFAULT_FILE_NAME_FOR_METADATAONREMOTE) {
-      metadataFiles.push(Object.assign({}, entry));
+      metadataFiles.push({
+        key: key,
+        existRemote: true,
+        mtimeRemote: entry.lastModified,
+        mtimeRemoteFmt: unixTimeToStr(entry.lastModified),
+        sizeRemote: password === "" ? entry.size : undefined,
+        sizeRemoteEnc: password === "" ? undefined : entry.size,
+        remoteEncryptedKey: remoteEncryptedKey,
+        changeRemoteMtimeUsingMapping: false,
+      });
     }
   }
 
   // Delete older duplicate metadata files.
   if (metadataFiles.length > 1) {
-    metadataFiles = metadataFiles.sort((a, b) => b.lastModified - a.lastModified);
+    metadataFiles = metadataFiles.sort((a, b) => b.mtimeRemote - a.mtimeRemote);
     
     metadataFiles.forEach(async (file, index) => {
       if (index !== 0) {
@@ -204,7 +212,67 @@ export const getRemoteStates = async (
   remoteType: SUPPORTED_SERVICES_TYPE,
   password: string = ""
 ) => {
-  
+  const remoteStates = [] as FileOrFolderMixedState[];
+
+  if (remote === undefined) {
+    return remoteStates;
+  }
+
+  for (const entry of remote) {
+    const remoteEncryptedKey = entry.key;
+
+    let key = remoteEncryptedKey;
+
+    if (password !== "") {
+      key = await decryptBase64urlToString(remoteEncryptedKey, password);
+    }
+
+    const backwardMapping = await getSyncMetaMappingByRemoteKeyAndVault(
+      remoteType,
+      db,
+      key,
+      entry.lastModified,
+      entry.etag,
+      vaultRandomID
+    );
+
+    let r = {} as FileOrFolderMixedState;
+
+    if (backwardMapping !== undefined) {
+      key = backwardMapping.localKey;
+      const mtimeRemote = backwardMapping.localMtime || entry.lastModified;
+
+      // the backwardMapping.localSize is the file BEFORE encryption
+      // we want to split two sizes for comparation later
+
+      r = {
+        key: key,
+        existRemote: true,
+        mtimeRemote: mtimeRemote,
+        mtimeRemoteFmt: unixTimeToStr(mtimeRemote),
+        sizeRemote: backwardMapping.localSize,
+        sizeRemoteEnc: password === "" ? undefined : entry.size,
+        remoteEncryptedKey: remoteEncryptedKey,
+        changeRemoteMtimeUsingMapping: true,
+      };
+    } else {
+      // do not have backwardMapping
+      r = {
+        key: key,
+        existRemote: true,
+        mtimeRemote: entry.lastModified,
+        mtimeRemoteFmt: unixTimeToStr(entry.lastModified),
+        sizeRemote: password === "" ? entry.size : undefined,
+        sizeRemoteEnc: password === "" ? undefined : entry.size,
+        remoteEncryptedKey: remoteEncryptedKey,
+        changeRemoteMtimeUsingMapping: false,
+      };
+    }
+
+    remoteStates.push(r);
+  }
+
+  return remoteStates;
 }
 
 export const parseRemoteItems = async (
@@ -239,6 +307,7 @@ export const parseRemoteItems = async (
     );
 
     let r = {} as FileOrFolderMixedState;
+
     if (backwardMapping !== undefined) {
       key = backwardMapping.localKey;
       const mtimeRemote = backwardMapping.localMtime || entry.lastModified;
