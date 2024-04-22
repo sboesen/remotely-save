@@ -55,7 +55,7 @@ import {
 } from "./moreOnLog";
 import {encryptStringToBase64url} from "./encrypt";
 import {DEFAULT_FILE_NAME_FOR_METADATAONREMOTE, DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2} from "./metadataOnRemote";
-import {getMetadataFiles, uploadExtraMeta} from "./sync";
+import {getRemoteMetadata, uploadExtraMeta} from "./sync";
 
 class PasswordModal extends Modal {
   plugin: RemotelySavePlugin;
@@ -2043,13 +2043,9 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
   private async deleteRemoteMetadata() {
     let client = this.getClient();
     let remoteFiles = await client.listFromRemote();
-    let remoteMetadataFiles = await getMetadataFiles(remoteFiles.Contents, this.plugin.settings.password)
+    let remoteMetadata = await getRemoteMetadata(remoteFiles.Contents, client, this.plugin.settings.password)
 
-    for (const metadataFile of remoteMetadataFiles) {
-      await client.deleteFromRemote(DEFAULT_FILE_NAME_FOR_METADATAONREMOTE,
-        this.plugin.settings.password,
-        metadataFile);
-    }
+    await client.deleteFromRemote(DEFAULT_FILE_NAME_FOR_METADATAONREMOTE, this.plugin.settings.password, remoteMetadata.remoteEncryptedKey);
   }
 
   private getClient() {

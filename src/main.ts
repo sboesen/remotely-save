@@ -47,8 +47,15 @@ import {
 import { DEFAULT_S3_CONFIG } from "./remoteForS3";
 import { DEFAULT_WEBDAV_CONFIG } from "./remoteForWebdav";
 import { RemotelySaveSettingTab } from "./settings";
-import { getRemoteMetadata, getRemoteStates, parseRemoteItems, SyncPlanType, SyncStatusType } from "./sync";
-import { doActualSync, getSyncPlan, isPasswordOk, getMetadataFromRemoteFiles } from "./sync";
+import { 
+  getRemoteMetadata, 
+  getRemoteStates, 
+  SyncPlanType, 
+  SyncStatusType,
+  doActualSync, 
+  getSyncPlan, 
+  isPasswordOk
+} from "./sync";
 import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
 import { ObsConfigDirFileType, listFilesInObsFolder } from "./obsFolderLister";
 import { I18n } from "./i18n";
@@ -246,7 +253,7 @@ export default class RemotelySavePlugin extends Plugin {
         client.serviceType, 
         this.settings.password
       );
-      
+
       const origMetadataOnRemote = await this.fetchMetadataFromRemote(metadataFile, client);
 
       getNotice(
@@ -421,16 +428,6 @@ export default class RemotelySavePlugin extends Plugin {
       true
     );
     return deserializeMetadataOnRemote(buf);
-  }
-
-  private async parseRemoteItems(contents: RemoteItem[], client: RemoteClient) {
-    return await parseRemoteItems(
-      contents,
-      this.db,
-      this.vaultRandomID,
-      client.serviceType,
-      this.settings.password
-    );
   }
 
   private getRemoteClient(self: this) {
@@ -1293,9 +1290,9 @@ export default class RemotelySavePlugin extends Plugin {
     const client = this.getRemoteClient(this);
     
     const remoteFiles = await client.listFromRemote();
-    const remoteMetadataFile = await getMetadataFromRemoteFiles(remoteFiles.Contents, this.settings.password);
+    const remoteMetadataFile = await getRemoteMetadata(remoteFiles.Contents, client, this.settings.password);
 
-    const lastSynced = remoteMetadataFile.lastModified;
+    const lastSynced = remoteMetadataFile.mtimeRemote;
 
     if (lastSynced === undefined && this.settings.lastSynced !== undefined) {
       return this.settings.lastSynced;
@@ -1314,7 +1311,16 @@ export default class RemotelySavePlugin extends Plugin {
       remoteRsp.Contents,
       this.settings.password
     );
-    const {remoteStates, metadataFile} = await this.parseRemoteItems(remoteRsp.Contents, client);
+
+    const metadataFile = await getRemoteMetadata(remoteRsp.Contents, client, this.settings.password);
+
+    const remoteStates = await getRemoteStates(
+      remoteRsp.Contents, 
+      this.db, 
+      this.vaultRandomID, 
+      client.serviceType, 
+      this.settings.password
+    );
 
     const local = this.app.vault.getAllLoadedFiles();
     const localHistory = await this.getLocalHistory();
