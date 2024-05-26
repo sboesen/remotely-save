@@ -25,7 +25,8 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   enableStatusBarInfo: true,
   trashLocal: false,
   syncTrash: false,
-  syncBookmarks: true
+  syncBookmarks: true,
+  checkFileHashes: false
 };
 
 describe("Config Persist tests", () => {

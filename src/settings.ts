@@ -1770,6 +1770,22 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     new Setting(advDiv)
+      .setName(t("settings_sync_hash_files"))
+      .setDesc(t("settings_sync_hash_files_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("disable", t("disable"));
+        dropdown.addOption("enable", t("enable"));
+        dropdown
+          .setValue(
+            `${this.plugin.settings.syncCheckFileHashes ? "enable" : "disable"}`
+          )
+          .onChange(async (val) => {
+            this.plugin.settings.syncCheckFileHashes = val === "enable";
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(advDiv)
       .setName(t("settings_configdir"))
       .setDesc(
         t("settings_configdir_desc", {
@@ -2030,6 +2046,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             this.app.vault,
             undefined,
             undefined,
+            [],
             [],
             this.plugin.settings.password );
             
